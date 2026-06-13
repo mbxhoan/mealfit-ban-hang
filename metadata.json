@@ -1,0 +1,6 @@
+{
+  "name": "Quản lý Bán hàng MealPrep",
+  "description": "Ứng dụng quản lý bán hàng mealprep chuyên nghiệp, giúp quản lý thực đơn, đơn hàng, khách hàng, bảng giá, báo cáo doanh thu real-time và hỗ trợ xuất hóa đơn, sao lưu Google Drive",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
