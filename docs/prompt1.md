@@ -1,0 +1,14 @@
+tôi vừa triển khai bộ frontend cho app bán hàng mealfit, giờ tôi muốn seed data từ sheets, tạo bộ prompt và plan, agents.md, claude.md,... và các file có liên quan để triển khai full app:
+- full tính năng quản lý món/combo món, giá vốn/giá bán/lãi/tỉ lệ lãi của từng món với từng trọng lượng món khác nhau, quản lý đơn hàng/chi tiết đơn hàng, doanh thu, lên đơn và ra bill cho khách
+- app UI đẹp, chuyên nghiệp
+- có loading screen, loading state khi chuyển trang, loading effect buttons
+- UI responsive: mobile 320–430px, tablet 768–1024px, desktop 1280–1920px, không tràn UI, không horizontal scroll, không phá logic nghiệp vụ, không mất cân đối, tham khảo thêm phía dưới
+- có authen cơ bản tạo sẵn seeding 
+- phân quyền admin và nhân viên thôi
+- web có animation chạy nền background cho sinh động, tăng trải nghiệm người dùng
+- Drawer + Toast + Validation (form popup): panel trượt từ phải, đóng bằng ESC/click nền, toast góc trên phải (success/error/info), tự ẩn 4s, form CRUD → drawer + validate + toast
+- nút tải template, panel hướng dẫn cột, bảng lỗi (dòng/cột/giá trị/lỗi) chặn import tới khi sạch, dùng useParams + toast
+- nạp toàn bộ dữ liệu từ sheets vào hệ thống sẵn luôn
+- UI/UX (font, kích thước, icon): Font body → "Avenir Next", "Segoe UI", sans-serif, base 14px, Thu nhỏ nút (.btn padding/font/radius) + heading (h1 21, stat 22, h3 15), Thêm icon mọi nút: quay lại, xác nhận, hoàn tất, tải template, nạp, lưu, hủy, tạo, đăng nhập, sửa, xóa, Authentication / Page direct / Button clicks loading animation / effects 
+- tạo 1 trang giới thiệu hiển thị sản phẩm thật thẩm mỹ, bán hàng showcase món ăn như landing page không cần login cho khách hàng xem
+- triển khai Branding / assets: app/icon.png, app/apple-icon.png, app/opengraph-image.png, app, twitter-image.png, Metadata OG/Twitter, Login: banner.png, app/icon.png (favicon), app/apple-icon.png, app/opengraph-image.png + twitter-image.png (từ banner)
