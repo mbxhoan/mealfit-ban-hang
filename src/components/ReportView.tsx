@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useMemo } from "react";
 import { Order, MealItem } from "../data/mealPrepData";
 import { 

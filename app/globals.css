@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ---- Design tokens (typography + brand) per docs/mealfit_plan.md §4 ---- */
+@theme {
+  --font-sans: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-900: #064e3b;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px; /* base 14px */
+  line-height: 1.5;
+  color: #0f172a;
+  background: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Heading scale from the spec */
+h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 17px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+
+.stat-value { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Compact buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 0.55rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(0.5px); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn svg { width: 15px; height: 15px; }
+
+/* No horizontal scroll anywhere (responsive guard) */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* ---- Background ambience: slow drifting brand blobs (non-blocking, behind content) ---- */
+@keyframes mf-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(4%, -6%) scale(1.08); }
+  66%  { transform: translate(-5%, 4%) scale(0.96); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes mf-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Opacity-only fade — leaves NO lingering transform, so it does not create a
+   containing block that would trap position:fixed descendants (drawers/modals/overlays). */
+@keyframes mf-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes mf-spin {
+  to { transform: rotate(360deg); }
+}
+.mf-fade-up { animation: mf-fade-up 0.4s ease both; }
+.mf-fade { animation: mf-fade 0.3s ease both; }
+.mf-spin { animation: mf-spin 0.7s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-fade-up, .mf-fade, .mf-spin { animation: none; }
+}
+
+/* Thin scrollbars inside scrollable panes */
+.mf-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.mf-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.mf-scroll::-webkit-scrollbar-track { background: transparent; }

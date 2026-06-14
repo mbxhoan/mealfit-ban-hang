@@ -1,7 +1,10 @@
 -- MealFit schema migration
--- This migration creates tables specific to the MealFit product for menu items, combos, customers,
--- employees, orders and order details.  It does not enable row‑level security yet; you should
--- create appropriate RLS policies after defining the roles and permissions for your product.
+-- Creates the tables that back the MealFit sales-management product: menu items, combos,
+-- customers, employees (with admin/staff roles), orders and order items.
+-- Row-level security is enabled with permissive authenticated-read policies; tighten per role
+-- in a follow-up migration once auth.users <-> mealfit_employees mapping is finalised.
+
+create extension if not exists pgcrypto;
 
 create table if not exists public.mealfit_products (
   id uuid primary key default gen_random_uuid(),
@@ -105,6 +108,35 @@ create index if not exists mealfit_products_code_idx on public.mealfit_products(
 create index if not exists mealfit_combos_code_idx on public.mealfit_combos(code);
 create index if not exists mealfit_customers_code_idx on public.mealfit_customers(code);
 create index if not exists mealfit_orders_code_idx on public.mealfit_orders(code);
+create index if not exists mealfit_order_items_order_idx on public.mealfit_order_items(order_id);
 
--- Enable row level security later in application setup if needed
--- alter table public.mealfit_products enable row level security;
+-- Default admin employee so the seeded app is usable immediately.
+-- Password is plain text here for the bootstrap login fallback; replace with a hashed value in production.
+insert into public.mealfit_employees (code, name, email, role, encrypted_password)
+values
+  ('admin', 'Quản trị viên', 'admin@mealfit.vn', 'admin', 'admin123'),
+  ('nhanvien', 'Nhân viên bán hàng', 'staff@mealfit.vn', 'staff', 'staff123')
+on conflict (code) do nothing;
+
+-- Row level security
+alter table public.mealfit_products enable row level security;
+alter table public.mealfit_combos enable row level security;
+alter table public.mealfit_combo_products enable row level security;
+alter table public.mealfit_customers enable row level security;
+alter table public.mealfit_employees enable row level security;
+alter table public.mealfit_orders enable row level security;
+alter table public.mealfit_order_items enable row level security;
+
+-- Permissive read for authenticated users; write left to the service role for now.
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'mealfit_products','mealfit_combos','mealfit_combo_products',
+    'mealfit_customers','mealfit_orders','mealfit_order_items'
+  ]
+  loop
+    execute format('drop policy if exists "%s_read" on public.%I;', t, t);
+    execute format('create policy "%s_read" on public.%I for select using (auth.role() = ''authenticated'');', t, t);
+  end loop;
+end $$;

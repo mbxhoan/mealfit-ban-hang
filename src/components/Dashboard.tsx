@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo } from "react";
 import { Order, MealItem } from "../data/mealPrepData";
 import { 
@@ -259,7 +261,7 @@ export default function Dashboard({ orders, meals, customersCount, onNavigate }:
                   formatter={(value: any) => [formatVND(Number(value)), ""]}
                   contentStyle={{ backgroundColor: "#1e293b", color: "#f8fafc", borderRadius: "8px", fontSize: "12px" }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", pt: 10 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: 10 }} />
                 <Line type="monotone" dataKey="Doanh thu" stroke="#0ea5e9" strokeWidth={2.5} activeDot={{ r: 6 }} />
                 <Line type="monotone" dataKey="Lợi nhuận" stroke="#10b981" strokeWidth={2.5} />
               </LineChart>

@@ -1,6 +1,13 @@
+"use client";
+
 import React, { useState, useMemo } from "react";
-import { Order, Customer, MealItem, OrderDetail, PricingOption } from "../data/mealPrepData";
-import { uploadInvoiceToDrive, isAuthenticated, getAccessToken } from "../services/googleDriveService";
+import { Order, Customer, OrderDetail } from "../data/mealPrepData";
+import { uploadInvoiceToDrive } from "../services/googleDriveService";
+import { useData } from "@/contexts/DataContext";
+import { StatStrip, type Stat } from "@/components/ui/StatStrip";
+import { useToast } from "@/components/ui/Toast";
+import { useIsAdmin } from "@/contexts/AuthContext";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { 
   ShoppingBag, 
   Search, 
@@ -18,20 +25,20 @@ import {
   Share2,
   FileText,
   Save,
-  Grid
+  Grid,
+  Wallet,
+  AlertCircle
 } from "lucide-react";
 
-interface OrderManagementProps {
-  orders: Order[];
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  customers: Customer[];
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-  meals: MealItem[];
-}
+export default function OrderManagement() {
+  const { orders, customers, meals, saveOrder, removeOrder, saveCustomer } = useData();
+  const toast = useToast();
+  const isAdmin = useIsAdmin();
 
-export default function OrderManagement({ orders, setOrders, customers, setCustomers, meals }: OrderManagementProps) {
   // Navigation & view states
   const [filterStatus, setFilterStatus] = useState<string>("Tất cả");
+  const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("_default_no_search");
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [showBillModal, setShowBillModal] = useState<boolean>(false);
@@ -88,6 +95,18 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
       return matchStatus && matchSearch;
     });
   }, [orders, filterStatus, computedSearchTerm]);
+
+  const stats: Stat[] = useMemo(() => {
+    const revenue = orders.reduce((s, o) => s + o.totalAmount, 0);
+    const profit = orders.reduce((s, o) => s + o.totalProfit, 0);
+    const unpaid = orders.filter((o) => o.paymentStatus === "Chưa thanh toán").length;
+    return [
+      { label: "Tổng đơn hàng", value: orders.length, icon: <ShoppingBag className="h-5 w-5" />, accent: "bg-brand-50 text-brand-600" },
+      { label: "Doanh thu", value: formatVND(revenue), icon: <TrendingUp className="h-5 w-5" />, accent: "bg-indigo-50 text-indigo-600" },
+      { label: "Lợi nhuận", value: formatVND(profit), icon: <Wallet className="h-5 w-5" />, accent: "bg-emerald-50 text-emerald-600" },
+      { label: "Chưa thanh toán", value: unpaid, sub: `/ ${orders.length} đơn`, icon: <AlertCircle className="h-5 w-5" />, accent: "bg-orange-50 text-orange-600" },
+    ];
+  }, [orders]);
 
   // Handle selected customer change on create new order
   const handleCustomerSelection = (id: string) => {
@@ -176,19 +195,22 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
   }, [orderItems]);
 
   // Submit and save drafted order
-  const handleSaveOrder = (e: React.FormEvent) => {
+  const handleSaveOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (orderItems.length === 0) {
-      alert("Vui lòng thêm ít nhất 1 món ăn vào đơn hàng!");
+      toast.error("Vui lòng thêm ít nhất 1 món ăn vào đơn hàng!");
       return;
     }
 
     let customerIdToLink = newOrderCustomerId;
-    
+    let custName = tempCustomerName;
+    let custPhone = tempCustomerPhone;
+    let custAddress = tempCustomerAddress;
+
     // Create new customer on the fly if applicable
     if (newOrderCustomerId === "NEW" || !newOrderCustomerId) {
       if (!tempCustomerName || !tempCustomerPhone) {
-        alert("Vui lòng điền tên và số điện thoại của khách hàng!");
+        toast.error("Vui lòng điền tên và số điện thoại của khách hàng!");
         return;
       }
       const newCustId = `cust-${Date.now()}`;
@@ -202,20 +224,23 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
         totalSpent: draftTotals.priceSum,
         createdAt: new Date().toISOString().split("T")[0]
       };
-      setCustomers(prev => [...prev, newCust]);
+      setSubmitting(true);
+      try {
+        await saveCustomer(newCust);
+      } catch {
+        setSubmitting(false);
+        toast.error("Lưu khách hàng thất bại.");
+        return;
+      }
       customerIdToLink = newCustId;
     } else {
-      // Update existing customer profile
-      setCustomers(prev => prev.map(c => {
-        if (c.id === customerIdToLink) {
-          return {
-            ...c,
-            totalOrders: c.totalOrders + 1,
-            totalSpent: c.totalSpent + draftTotals.priceSum
-          };
-        }
-        return c;
-      }));
+      // Link to an existing customer profile (stats are recomputed from orders on reload).
+      const existing = customers.find(c => c.id === customerIdToLink);
+      if (existing) {
+        custName = existing.name;
+        custPhone = existing.phone;
+        custAddress = existing.address;
+      }
     }
 
     // Create new order record
@@ -224,9 +249,9 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
       id: `ord-${Date.now()}`,
       orderNumber: uniqueNumber,
       customerId: customerIdToLink,
-      customerName: tempCustomerName,
-      customerPhone: tempCustomerPhone,
-      customerAddress: tempCustomerAddress,
+      customerName: custName,
+      customerPhone: custPhone,
+      customerAddress: custAddress,
       items: [...orderItems],
       totalAmount: draftTotals.priceSum,
       totalCost: draftTotals.costSum,
@@ -240,7 +265,16 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
       notes
     };
 
-    setOrders(prev => [newOrder, ...prev]);
+    setSubmitting(true);
+    try {
+      await saveOrder(newOrder);
+      toast.success(`Đã lên đơn ${newOrder.orderNumber} thành công!`);
+    } catch {
+      toast.error("Lưu đơn hàng thất bại. Vui lòng thử lại.");
+      setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
 
     // Cleanup and close
     setShowAddModal(false);
@@ -254,23 +288,32 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
   };
 
   // Change single order status
-  const handleUpdateOrderStatus = (orderId: string, status: Order["status"]) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        return { ...o, status };
-      }
-      return o;
-    }));
+  const handleUpdateOrderStatus = async (orderId: string, status: Order["status"]) => {
+    const target = orders.find(o => o.id === orderId);
+    if (!target) return;
+    await saveOrder({ ...target, status });
+    toast.info(`Cập nhật trạng thái đơn: ${status}.`);
   };
 
   // Change single order payment status
-  const handleUpdatePaymentStatus = (orderId: string, paymentStatus: Order["paymentStatus"]) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        return { ...o, paymentStatus };
-      }
-      return o;
-    }));
+  const handleUpdatePaymentStatus = async (orderId: string, paymentStatus: Order["paymentStatus"]) => {
+    const target = orders.find(o => o.id === orderId);
+    if (!target) return;
+    await saveOrder({ ...target, paymentStatus });
+    toast.info(`Thanh toán: ${paymentStatus}.`);
+  };
+
+  // Delete an order
+  const handleDeleteOrder = async () => {
+    if (!confirmOrder) return;
+    const ord = confirmOrder;
+    setConfirmOrder(null);
+    try {
+      await removeOrder(ord.id);
+      toast.success(`Đã xóa đơn ${ord.orderNumber}.`);
+    } catch {
+      toast.error("Xóa đơn thất bại.");
+    }
   };
 
   // Autogenerated message confirmation suitable for sending to messaging apps (Telegram, Zalo...)
@@ -286,7 +329,7 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
   const handleCopyConfirmation = (order: Order) => {
     const text = getZaloConfirmationText(order);
     navigator.clipboard.writeText(text);
-    alert("Đã sao chép mẫu tin nhắn gửi Zalo/SMS xác nhận đơn!");
+    toast.success("Đã sao chép mẫu tin nhắn xác nhận đơn (Zalo/SMS)!");
   };
 
   // Clean printable HTML invoice creator
@@ -407,7 +450,7 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
         status: "success",
         msg: `Lưu hóa đơn ${order.orderNumber} vào Google Drive thành công!`
       });
-      alert(`Đã xuất hóa đơn HTML lên Google Drive thành công!\nĐường dẫn xem file: ${result.fileUrl}`);
+      toast.success(`Đã xuất hóa đơn ${order.orderNumber} lên Google Drive!`);
     } else {
       setDriveUploadStatus({
         status: "error",
@@ -418,6 +461,8 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
 
   return (
     <div className="space-y-6">
+      <StatStrip stats={stats} />
+
       {/* Search and control row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
         {/* Search */}
@@ -578,6 +623,15 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
                             <FileText className="w-3.5 h-3.5" />
                             Ra Bill / Drive
                           </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setConfirmOrder(order)}
+                              className="p-1 px-2 border border-slate-200 hover:border-red-300 text-slate-500 hover:text-red-600 rounded-lg flex items-center gap-1.5 text-[10px] font-bold"
+                              title="Xóa đơn hàng"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -867,18 +921,28 @@ export default function OrderManagement({ orders, setOrders, customers, setCusto
                 >
                   Đóng/Hủy
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   id="btn-sub-save-order"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-sm transition-transform cursor-pointer"
+                  disabled={submitting}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-sm transition-transform cursor-pointer"
                 >
-                  Xác nhận lưu đơn hàng
+                  {submitting ? "Đang lưu…" : "Xác nhận lưu đơn hàng"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOrder !== null}
+        title="Xóa đơn hàng?"
+        message={`Đơn ${confirmOrder?.orderNumber ?? ""} sẽ bị xóa vĩnh viễn cùng chi tiết đơn. Hành động không thể hoàn tác.`}
+        confirmLabel="Xóa đơn"
+        onConfirm={handleDeleteOrder}
+        onCancel={() => setConfirmOrder(null)}
+      />
 
       {/* MODAL 2: BILL PREVIEW & CONFIRMATIONS */}
       {showBillModal && selectedOrder && (

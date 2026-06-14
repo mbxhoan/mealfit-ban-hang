@@ -1,196 +1,227 @@
+"use client";
+
 import React, { useState, useMemo } from "react";
 import { Customer } from "../data/mealPrepData";
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Trash2, 
-  X, 
-  Sliders, 
-  Phone, 
-  MapPin, 
-  Mail, 
+import {
+  Users,
+  Search,
+  Plus,
+  Trash2,
+  Phone,
+  MapPin,
+  Mail,
   Sparkles,
   Award,
-  BookOpen
+  Save,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
+import { useData } from "@/contexts/DataContext";
+import { StatStrip, type Stat } from "@/components/ui/StatStrip";
+import { useToast } from "@/components/ui/Toast";
+import { useIsAdmin } from "@/contexts/AuthContext";
+import { Drawer } from "@/components/ui/Drawer";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
+import { Field, inputClass } from "@/components/ui/Field";
 
-interface CustomerManagementProps {
-  customers: Customer[];
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-}
+export default function CustomerManagement() {
+  const { customers, saveCustomer, removeCustomer } = useData();
+  const toast = useToast();
+  const isAdmin = useIsAdmin();
 
-export default function CustomerManagement({ customers, setCustomers }: CustomerManagementProps) {
-  const [searchTerm, setSearchTerm] = useState<string>("_default_no_search");
-  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  // New customer registration form fields
-  const [name, setName] = useState<string>("");
-  const [phone, setPhone] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [address, setAddress] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Safe Search Term
-  const computedSearchTerm = useMemo(() => {
-    return searchTerm === "_default_no_search" ? "" : searchTerm;
-  }, [searchTerm]);
+  const formatVND = (num: number) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
 
-  const formatVND = (num: number) => {
-    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
-  };
+  const stats: Stat[] = useMemo(() => {
+    const totalSpent = customers.reduce((s, c) => s + c.totalSpent, 0);
+    const vip = customers.filter((c) => c.totalSpent > 3000000).length;
+    const avg = customers.length ? Math.round(totalSpent / customers.length) : 0;
+    return [
+      { label: "Tổng khách hàng", value: customers.length, icon: <Users className="h-5 w-5" />, accent: "bg-brand-50 text-brand-600" },
+      { label: "Khách VIP", value: vip, sub: "> 3.000.000đ", icon: <Award className="h-5 w-5" />, accent: "bg-amber-50 text-amber-600" },
+      { label: "Tổng chi tiêu", value: formatVND(totalSpent), icon: <Wallet className="h-5 w-5" />, accent: "bg-indigo-50 text-indigo-600" },
+      { label: "TB mỗi khách", value: formatVND(avg), icon: <TrendingUp className="h-5 w-5" />, accent: "bg-emerald-50 text-emerald-600" },
+    ];
+  }, [customers]);
 
   const filteredCustomers = useMemo(() => {
-    const term = computedSearchTerm.toLowerCase();
-    return customers.filter(c => {
-      return computedSearchTerm === "" || 
+    const term = searchTerm.toLowerCase();
+    return customers.filter(
+      (c) =>
+        term === "" ||
         c.name.toLowerCase().includes(term) ||
         c.phone.includes(term) ||
         c.address.toLowerCase().includes(term) ||
         c.email.toLowerCase().includes(term) ||
-        (c.notes && c.notes.toLowerCase().includes(term));
-    });
-  }, [customers, computedSearchTerm]);
+        (c.notes && c.notes.toLowerCase().includes(term)),
+    );
+  }, [customers, searchTerm]);
 
-  // Handle registering customer
-  const handleSaveCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !phone || !address) {
-      alert("Vui lòng nhập họ tên, điện thoại và địa chỉ giao hàng!");
-      return;
-    }
-
-    const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
-      name,
-      phone,
-      email: email || "khach.hang@gmail.com",
-      address,
-      notes,
-      totalOrders: 0,
-      totalSpent: 0,
-      createdAt: new Date().toISOString().split("T")[0]
-    };
-
-    setCustomers(prev => [...prev, newCustomer]);
-
-    // reset and close
-    setShowAddModal(false);
+  const openDrawer = () => {
     setName("");
     setPhone("");
     setEmail("");
     setAddress("");
     setNotes("");
+    setErrors({});
+    setDrawerOpen(true);
   };
 
-  const handleDeleteCustomer = (id: string) => {
-    const confirmation = window.confirm("Xác nhận ngừng quản lý hồ sơ khách hàng này?");
-    if (confirmation) {
-      setCustomers(customers.filter(c => c.id !== id));
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!name.trim()) e.name = "Vui lòng nhập họ tên";
+    if (!phone.trim()) e.phone = "Vui lòng nhập số điện thoại";
+    else if (!/^[0-9+\s.-]{8,}$/.test(phone.trim())) e.phone = "Số điện thoại không hợp lệ";
+    if (!address.trim()) e.address = "Vui lòng nhập địa chỉ giao hàng";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) {
+      toast.error("Vui lòng kiểm tra lại thông tin bắt buộc.");
+      return;
+    }
+    setSaving(true);
+    const newCustomer: Customer = {
+      id: `cust-${Date.now()}`,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim() || "khach.hang@gmail.com",
+      address: address.trim(),
+      notes: notes.trim(),
+      totalOrders: 0,
+      totalSpent: 0,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+    try {
+      await saveCustomer(newCustomer);
+      toast.success(`Đã tạo hồ sơ khách hàng "${newCustomer.name}".`);
+      setDrawerOpen(false);
+    } catch {
+      toast.error("Lưu thất bại. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmId) return;
+    const id = confirmId;
+    setConfirmId(null);
+    try {
+      await removeCustomer(id);
+      toast.success("Đã xóa hồ sơ khách hàng.");
+    } catch {
+      toast.error("Xóa thất bại. Vui lòng thử lại.");
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Search and triggers row */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
-        {/* Search tool */}
-        <div className="relative w-full sm:w-80">
-          <input 
-            type="text" 
-            placeholder="Tìm khách hàng: Tên, điện thoại, địa chỉ, sở thích ăn uống..." 
-            value={computedSearchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs border border-slate-200 focus:border-indigo-500 rounded-lg pl-9 pr-4 py-2 bg-slate-50 text-slate-700 outline-none"
-          />
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-        </div>
+      <StatStrip stats={stats} />
 
-        {/* Action Button */}
-        <button 
-          id="btn-trigger-add-customer"
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm cursor-pointer ml-auto sm:ml-0"
-        >
-          <Plus className="w-4 h-4" />
-          Đăng ký hồ sơ khách hàng
-        </button>
+      {/* Search + trigger */}
+      <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+        <div className="relative w-full sm:w-80">
+          <input
+            type="text"
+            placeholder="Tìm khách hàng: tên, SĐT, địa chỉ, ghi chú…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-700 outline-none focus:border-brand-500"
+          />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        </div>
+        <Button icon={<Plus />} onClick={openDrawer} className="ml-auto sm:ml-0">
+          Đăng ký khách hàng
+        </Button>
       </div>
 
-      {/* Grid of registered customer details cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {filteredCustomers.map(customer => {
-          // Tier labelling based on total spent
+      {/* Cards */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {filteredCustomers.map((customer) => {
           const isVip = customer.totalSpent > 3000000;
-          
           return (
-            <div key={customer.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between p-5 relative select-none">
-              <button 
-                type="button" 
-                onClick={() => handleDeleteCustomer(customer.id)}
-                className="absolute right-4 top-4 text-slate-300 hover:text-red-500 p-1 rounded-full transition-colors"
-                title="Xóa khách hàng"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            <div
+              key={customer.id}
+              className="relative flex select-none flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+            >
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmId(customer.id)}
+                  className="absolute right-4 top-4 rounded-full p-1 text-slate-300 transition-colors hover:text-red-500"
+                  title="Xóa khách hàng"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
 
               <div className="space-y-3.5 text-left">
-                {/* Header identity */}
-                <div className="flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-full bg-indigo-50 font-extrabold text-indigo-700 flex items-center justify-center text-sm uppercase">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-extrabold uppercase text-brand-700">
                     {customer.name.slice(0, 2)}
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-sm">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
                       {customer.name}
                       {isVip && (
-                        <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border border-amber-200">
-                          <Award className="w-3 h-3 text-amber-500" />
-                          HỘI VIÊN THÂN THIẾT (VIP)
+                        <span className="flex items-center gap-0.5 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-extrabold text-amber-700">
+                          <Award className="h-3 w-3 text-amber-500" /> VIP
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium">Khách hàng từ {customer.createdAt}</div>
+                    <div className="text-[10px] font-medium text-slate-400">Khách hàng từ {customer.createdAt}</div>
                   </div>
                 </div>
 
-                {/* Contact info list */}
                 <div className="space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="font-semibold font-mono">{customer.phone}</span>
+                    <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="font-mono font-semibold">{customer.phone}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-[11px] truncate">{customer.email}</span>
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate text-[11px]">{customer.email}</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
                     <span className="text-[11px] leading-relaxed">{customer.address}</span>
                   </div>
                 </div>
 
-                {/* Health preferences & Dietary guidelines notes */}
-                <div className="bg-emerald-50/50 border-l-3 border-emerald-500 rounded p-2.5 text-[11px]">
-                  <div className="font-bold text-emerald-800 mb-0.5 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    Chế độ dinh dưỡng đặc biệt / Ghi chú bếp:
+                <div className="rounded border-l-[3px] border-brand-500 bg-brand-50/50 p-2.5 text-[11px]">
+                  <div className="mb-0.5 flex items-center gap-1 font-bold text-brand-700">
+                    <Sparkles className="h-3.5 w-3.5 text-brand-600" /> Ghi chú khẩu vị / bếp:
                   </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    {customer.notes || "Khách ăn uống bình thường, không có yêu cầu dị ứng hay kiêng cữ đặc biệt."}
+                  <p className="leading-relaxed text-slate-600">
+                    {customer.notes || "Khách ăn uống bình thường, không yêu cầu đặc biệt."}
                   </p>
                 </div>
               </div>
 
-              {/* Purchase statistics tracking */}
-              <div className="border-t border-slate-50 pt-3.5 mt-4 grid grid-cols-2 gap-4 text-center">
-                <div className="bg-slate-50 p-2 rounded-lg">
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase">Đơn đã đặt</div>
-                  <div className="font-extrabold text-slate-800 mt-1">{customer.totalOrders} đơn</div>
+              <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-50 pt-3.5 text-center">
+                <div className="rounded-lg bg-slate-50 p-2">
+                  <div className="text-[10px] font-semibold uppercase text-slate-400">Đơn đã đặt</div>
+                  <div className="mt-1 font-extrabold text-slate-800">{customer.totalOrders} đơn</div>
                 </div>
-                <div className="bg-slate-50 p-2 rounded-lg">
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase">Tổng chi tiêu</div>
-                  <div className="font-extrabold text-indigo-700 mt-1">{formatVND(customer.totalSpent)}</div>
+                <div className="rounded-lg bg-slate-50 p-2">
+                  <div className="text-[10px] font-semibold uppercase text-slate-400">Tổng chi tiêu</div>
+                  <div className="mt-1 font-extrabold text-brand-700">{formatVND(customer.totalSpent)}</div>
                 </div>
               </div>
             </div>
@@ -198,105 +229,57 @@ export default function CustomerManagement({ customers, setCustomers }: Customer
         })}
       </div>
 
-      {/* MODAL: REGISTER NEW CUSTOMET INFO */}
-      {showAddModal && (
-        <div id="add-customer-backdrop" className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white border rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-indigo-50/50">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-700" />
-                <h3 className="font-bold text-slate-800 text-sm">Đăng ký Hồ sơ Khách hàng mới</h3>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveCustomer} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs text-slate-600">
-              <div className="space-y-4 text-left">
-                {/* Name */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Họ tên khách hàng *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Nguyễn Thị B"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full text-xs border border-slate-200 p-2.5 rounded-lg bg-white outline-none font-semibold text-slate-700 focus:border-indigo-500"
-                  />
-                </div>
-
-                {/* Phone & email row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Số điện thoại liên lạc *</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="09..."
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full text-xs border border-slate-200 p-2.5 rounded-lg bg-white outline-none font-bold text-slate-700 font-mono focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email (Tùy chọn)</label>
-                    <input 
-                      type="email"
-                      placeholder="email@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full text-xs border border-slate-200 p-2.5 rounded-lg bg-white outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Địa chỉ giao nhận cơm thường trú *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Chung cư Vinhomes Central Park, Bình Thạnh"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full text-xs border border-slate-200 p-2.5 rounded-lg bg-white outline-none focus:border-indigo-500 text-slate-700"
-                  />
-                </div>
-
-                {/* Health & kitchen notes */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Ghi chú khẩu vị & mục tiêu (Tăng cơ / Giảm mỡ / Dị ứng nguyên liệu)</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Ví dụ: Hội viên Gym gắt gao. Chỉ ăn ức gà không da, không hành tỏi, không thêm bột ngọt. Giao mốc 11h trưa."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full text-xs border border-slate-200 p-2.5 rounded-lg bg-white outline-none focus:border-indigo-500 text-slate-700 leading-relaxed"
-                  />
-                </div>
-              </div>
-
-              {/* Actions footer */}
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer"
-                >
-                  Bỏ qua
-                </button>
-                <button 
-                  type="submit" 
-                  id="btn-sub-save-customer"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-lg shadow-sm transition-transform cursor-pointer"
-                >
-                  Tạo hồ sơ dinh dưỡng
-                </button>
-              </div>
-            </form>
+      {/* Drawer form */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Đăng ký hồ sơ khách hàng"
+        subtitle="Thông tin liên hệ & ghi chú khẩu vị"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDrawerOpen(false)}>
+              Hủy
+            </Button>
+            <Button icon={<Save />} loading={saving} onClick={handleSave}>
+              Tạo hồ sơ
+            </Button>
           </div>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Họ tên khách hàng" required error={errors.name}>
+            <input className={inputClass} placeholder="Nguyễn Thị B" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Số điện thoại" required error={errors.phone}>
+              <input className={inputClass} placeholder="09..." value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </Field>
+            <Field label="Email" hint="Tùy chọn">
+              <input className={inputClass} type="email" placeholder="email@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Địa chỉ giao hàng" required error={errors.address}>
+            <input className={inputClass} placeholder="Chung cư..., Quận..." value={address} onChange={(e) => setAddress(e.target.value)} />
+          </Field>
+          <Field label="Ghi chú khẩu vị & mục tiêu" hint="VD: chỉ ăn ức gà không da, giao 11h">
+            <textarea className={inputClass} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
+        </div>
+      </Drawer>
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Xóa hồ sơ khách hàng?"
+        message="Hồ sơ và lịch sử liên kết sẽ bị gỡ khỏi danh sách quản lý. Hành động không thể hoàn tác."
+        confirmLabel="Xóa"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmId(null)}
+      />
+
+      {filteredCustomers.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white py-12 text-center text-sm text-slate-400">
+          <Users className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+          Không tìm thấy khách hàng nào.
         </div>
       )}
     </div>
