@@ -114,8 +114,8 @@ create index if not exists mealfit_order_items_order_idx on public.mealfit_order
 -- Password is plain text here for the bootstrap login fallback; replace with a hashed value in production.
 insert into public.mealfit_employees (code, name, email, role, encrypted_password)
 values
-  ('admin', 'Quản trị viên', 'admin@mealfit.vn', 'admin', 'admin123'),
-  ('nhanvien', 'Nhân viên bán hàng', 'staff@mealfit.vn', 'staff', 'staff123')
+  ('admin', 'Quản trị viên', 'admin@example.com', 'admin', 'admin123'),
+  ('nhanvien', 'Nhân viên bán hàng', 'staff@example.com', 'staff', 'staff123')
 on conflict (code) do nothing;
 
 -- Row level security

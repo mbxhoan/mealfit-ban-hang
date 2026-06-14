@@ -4,6 +4,15 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-15 — fix GitGuardian security leak warning by using example.com domains for demo accounts
+
+- **Prompt summary**: Resolve GitGuardian "Company Email Password exposed on GitHub" warning for the initial commit.
+- **Scope**: MealFit authentication / seed data.
+- **Main files changed**: `lib/auth.ts`, `scripts/seed/mealfit.ts`, `supabase/migrations/20260613160000_mealfit.sql`, `supabase/migrations/20260615002500_update_employee_emails.sql`.
+- **Tests run**: `npm run typecheck`, `npm run build` (successful).
+- **Commit message**: `fix(mealfit): use dummy example.com emails for demo accounts to prevent security alerts`
+- **Notes/Risks**: None. Demo logins still work with the `admin`/`nhanvien` codes or their updated emails.
+
 ## 2026-06-14 (b) — wire Supabase read/write, seed all data, CRUD via Drawer/Toast
 
 - **Prompt summary**: Nối đọc/ghi trực tiếp Supabase cho `mealfit_*`; chuyển toàn bộ form CRUD

@@ -16,8 +16,8 @@ const COOKIE = 'mealfit_session';
 // Offline fallback accounts (mirrors the rows seeded by the migration). Plain text is acceptable
 // only for this bootstrap login; production should hash passwords and authenticate via Supabase.
 const SEED_CREDENTIALS: Array<SessionUser & { password: string }> = [
-  { code: 'admin', name: 'Quản trị viên', email: 'admin@mealfit.vn', role: 'admin', password: 'admin123' },
-  { code: 'nhanvien', name: 'Nhân viên bán hàng', email: 'staff@mealfit.vn', role: 'staff', password: 'staff123' },
+  { code: 'admin', name: 'Quản trị viên', email: 'admin@example.com', role: 'admin', password: 'admin123' },
+  { code: 'nhanvien', name: 'Nhân viên bán hàng', email: 'staff@example.com', role: 'staff', password: 'staff123' },
 ];
 
 /** Validate credentials against Supabase mealfit_employees, falling back to the seed list. */

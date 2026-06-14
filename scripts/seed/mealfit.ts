@@ -130,8 +130,8 @@ async function main() {
     'employees (2)',
     db.from('mealfit_employees').upsert(
       [
-        { code: 'admin', name: 'Quản trị viên', email: 'admin@mealfit.vn', role: 'admin', encrypted_password: 'admin123' },
-        { code: 'nhanvien', name: 'Nhân viên bán hàng', email: 'staff@mealfit.vn', role: 'staff', encrypted_password: 'staff123' },
+        { code: 'admin', name: 'Quản trị viên', email: 'admin@example.com', role: 'admin', encrypted_password: 'admin123' },
+        { code: 'nhanvien', name: 'Nhân viên bán hàng', email: 'staff@example.com', role: 'staff', encrypted_password: 'staff123' },
       ],
       { onConflict: 'code' },
     ),
