@@ -6,15 +6,22 @@
  * Pure CSS, fixed, non-interactive, fully disabled under prefers-reduced-motion.
  */
 
+// Visible floating produce across the whole page (matching the CTA corner look).
 const FLOATERS = [
-  { e: '🍅', top: '12%', left: '6%', size: 34, dur: 9, r: -8, op: 0.16 },
-  { e: '🥦', top: '26%', left: '88%', size: 40, dur: 11, r: 10, op: 0.14 },
-  { e: '🥑', top: '54%', left: '4%', size: 36, dur: 10, r: 6, op: 0.15 },
-  { e: '🥕', top: '70%', left: '92%', size: 32, dur: 12, r: -10, op: 0.14 },
-  { e: '🌿', top: '40%', left: '46%', size: 30, dur: 13, r: 8, op: 0.1 },
-  { e: '🥚', top: '82%', left: '24%', size: 28, dur: 9.5, r: -6, op: 0.13 },
-  { e: '🫑', top: '16%', left: '64%', size: 34, dur: 11.5, r: 9, op: 0.12 },
-  { e: '🍋', top: '60%', left: '70%', size: 30, dur: 10.5, r: -7, op: 0.13 },
+  { e: '🍅', top: '8%', left: '5%', size: 56, dur: 9, r: -8, op: 0.5 },
+  { e: '🥦', top: '22%', left: '90%', size: 64, dur: 11, r: 10, op: 0.42 },
+  { e: '🥑', top: '48%', left: '3%', size: 60, dur: 10, r: 6, op: 0.5 },
+  { e: '🥕', top: '66%', left: '93%', size: 52, dur: 12, r: -10, op: 0.46 },
+  { e: '🌿', top: '38%', left: '48%', size: 44, dur: 13, r: 8, op: 0.3 },
+  { e: '🥚', top: '84%', left: '20%', size: 46, dur: 9.5, r: -6, op: 0.4 },
+  { e: '🫑', top: '14%', left: '62%', size: 52, dur: 11.5, r: 9, op: 0.4 },
+  { e: '🍋', top: '58%', left: '72%', size: 48, dur: 10.5, r: -7, op: 0.44 },
+  { e: '🌽', top: '30%', left: '14%', size: 50, dur: 12.5, r: 7, op: 0.42 },
+  { e: '🍄', top: '74%', left: '54%', size: 44, dur: 10.8, r: -9, op: 0.36 },
+  { e: '🫛', top: '90%', left: '80%', size: 42, dur: 11.8, r: 6, op: 0.38 },
+  { e: '🍠', top: '6%', left: '34%', size: 48, dur: 13.2, r: -8, op: 0.36 },
+  { e: '🥬', top: '52%', left: '30%', size: 52, dur: 9.8, r: 9, op: 0.34 },
+  { e: '🍆', top: '20%', left: '78%', size: 46, dur: 12.2, r: -6, op: 0.36 },
 ];
 
 export function AmbientBackground() {
@@ -59,7 +66,7 @@ export function AmbientBackground() {
             ['--dur' as string]: `${f.dur}s`,
             ['--r' as string]: `${f.r}deg`,
             animationDelay: `${i * -1.3}s`,
-            filter: 'saturate(0.9)',
+            filter: 'drop-shadow(0 12px 16px rgba(71,56,36,0.12))',
           }}
         >
           {f.e}
