@@ -256,3 +256,80 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .food-card:hover { transform: none; }
   .btn-food::after { display: none; }
 }
+
+/* Print layout for A4 exports.
+   Keep the report content clean and avoid splitting customer blocks across pages. */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .app-shell-print-hidden,
+  .mf-print-hide {
+    display: none !important;
+  }
+
+  .mf-print-only {
+    display: block !important;
+  }
+
+  .app-shell-shell {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell-main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell-content {
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .app-shell-main,
+  .app-shell-content {
+    padding: 0 !important;
+  }
+
+  .mf-print-page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .mf-print-section,
+  .mf-print-order,
+  .mf-print-table,
+  .mf-print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .mf-print-table thead {
+    display: table-header-group;
+  }
+
+  .mf-print-table tfoot {
+    display: table-footer-group;
+  }
+
+  .mf-print-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

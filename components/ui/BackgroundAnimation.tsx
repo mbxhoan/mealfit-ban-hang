@@ -1,7 +1,7 @@
 /** Decorative drifting brand blobs. Fixed, behind content, pointer-events none, motion-safe. */
-export function BackgroundAnimation() {
+export function BackgroundAnimation({ className = "" }: { className?: string }) {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden ${className}`}>
       <div
         className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-200/40 blur-3xl"
         style={{ animation: 'mf-drift 18s ease-in-out infinite' }}

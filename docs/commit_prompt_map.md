@@ -4,6 +4,23 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-15 (d) — in A4 cho "Tổng hợp đơn theo khách" với page break theo khối khách
+
+- **Prompt summary**: Làm bản in A4 cho tab **Tổng hợp đơn theo khách**. Nhóm dữ liệu theo khách
+  rồi theo đơn, giữ nguyên khối khách/order khi in để tránh cắt dở giữa trang; ẩn shell nội bộ
+  (sidebar/header/filter/tabs) khi xuất giấy; thêm nút `In A4`.
+- **Scope**: MealFit UI print layout + statistics grouping.
+- **Main files changed**: `src/components/StatisticsView.tsx` (group theo khách/order, nút in,
+  banner print-only, page-break handling), `components/app/AppShell.tsx` (class print-hide cho shell),
+  `components/ui/BackgroundAnimation.tsx` (accept `className` để ẩn khi in), `app/globals.css`
+  (print media rules A4 + break-inside/break-before), `docs/mealfit_plan.md`,
+  `docs/mealfit_prompt.md`, `docs/commit_prompt_map.md`.
+- **Tests run**: `npm run build` (clean), `npm run typecheck` (clean after build generated
+  `.next/types`).
+- **Commit message**: `feat(mealfit): add A4 print layout for customer order summary`
+- **Notes/Risks**: Print layout relies on browser print CSS support for `break-inside: avoid`; very
+  long khách/order vẫn có thể bị tách nếu vượt chiều cao 1 trang A4.
+
 ## 2026-06-15 (c) — menu "Thống kê": tổng hợp đi chợ + tổng hợp đơn theo khách
 
 - **Prompt summary**: Thêm menu **Thống kê** gồm 2 tab. (1.a) *Tổng hợp đi chợ*: lọc đơn theo

@@ -56,6 +56,8 @@ RLS bật, policy đọc cho `authenticated`; ghi qua service role (siết theo 
 - **Animation nền**: `BackgroundAnimation` (blob brand trôi nhẹ, `prefers-reduced-motion` safe).
 - **Drawer & Toast**: `components/ui/Drawer.tsx`, `components/ui/Toast.tsx`.
 - **Validation**: `components/ui/Field.tsx`; import wizard validate cell-level.
+- **Print A4**: tab `Thống kê` ở chế độ `Tổng hợp đơn theo khách` phải có bản in A4 gọn,
+  giữ nguyên khối theo khách/order để tránh cắt dở giữa trang; ẩn sidebar/header/filter khi in.
 
 ## 5. Phân quyền & xác thực
 - **Admin**: toàn quyền + nhập dữ liệu (`/import`).

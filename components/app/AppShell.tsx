@@ -122,15 +122,15 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
     <AuthProvider user={user}>
       <ToastProvider>
         <DataProvider>
-          <BackgroundAnimation />
-          <div className="flex h-screen w-full overflow-hidden">
+          <BackgroundAnimation className="app-shell-print-hidden" />
+          <div className="app-shell-shell flex h-screen w-full overflow-hidden">
             {/* Desktop sidebar */}
-            <aside className="hidden w-60 shrink-0 lg:block">
+            <aside className="app-shell-sidebar app-shell-print-hidden hidden w-60 shrink-0 lg:block">
               <SidebarBody user={user} />
             </aside>
 
             {/* Mobile sidebar overlay */}
-            <div className={`fixed inset-0 z-50 lg:hidden ${mobileOpen ? '' : 'pointer-events-none'}`}>
+            <div className={`app-shell-mobile-overlay app-shell-print-hidden fixed inset-0 z-50 lg:hidden ${mobileOpen ? '' : 'pointer-events-none'}`}>
               <div
                 onClick={() => setMobileOpen(false)}
                 className={`absolute inset-0 bg-slate-900/50 transition-opacity ${mobileOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -145,8 +145,8 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
             </div>
 
             {/* Main column */}
-            <div className="flex h-full flex-1 flex-col overflow-hidden">
-              <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6">
+            <div className="app-shell-main flex h-full flex-1 flex-col overflow-hidden">
+              <header className="app-shell-header app-shell-print-hidden flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setMobileOpen((v) => !v)}
@@ -163,7 +163,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
               </header>
 
               <main className="mf-scroll flex-1 overflow-y-auto p-4 sm:p-6">
-                <div className="mf-fade mx-auto max-w-7xl">{children}</div>
+                <div className="app-shell-content mf-fade mx-auto max-w-7xl">{children}</div>
               </main>
             </div>
           </div>

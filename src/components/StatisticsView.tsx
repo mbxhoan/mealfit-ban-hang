@@ -15,6 +15,7 @@ import {
   Layers,
   Boxes,
   RotateCcw,
+  Printer,
 } from "lucide-react";
 
 interface StatisticsViewProps {
@@ -51,6 +52,17 @@ const kg = (g: number) => (g / 1000).toFixed(2);
 // Delivery statuses that count as "not delivered yet" (i.e. still need to be shopped/prepped).
 const UNDELIVERED: Order["status"][] = ["Mới", "Đang xử lý", "Đang giao"];
 
+const formatDeliveryDate = (value: string) => {
+  if (!value) return "Chưa có";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("vi-VN");
+};
+
 /** A single dish requirement, after combos have been exploded into their components. */
 interface DishLine {
   category: string;
@@ -73,6 +85,42 @@ interface ShopRow {
   isCombo: boolean;
   bags: number;
   grams: number;
+}
+
+interface PrepRow {
+  dishName: string;
+  weight: string;
+  bags: number;
+  total: number;
+}
+
+interface PrepSection {
+  title: string;
+  badge: string;
+  rows: PrepRow[];
+  totalBags: number;
+  totalGrams: number;
+}
+
+interface CustomerOrderBlock {
+  orderId: string;
+  orderCode: string;
+  deliveryDate: string;
+  status: Order["status"];
+  paymentStatus: Order["paymentStatus"];
+  sections: PrepSection[];
+  totalBags: number;
+  totalGrams: number;
+}
+
+interface CustomerGroup {
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  orders: CustomerOrderBlock[];
+  totalBags: number;
+  totalGrams: number;
 }
 
 export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
@@ -234,55 +282,83 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
     return { groups, totalBags, totalGrams };
   }, [lines]);
 
-  // ----- Tab 1.b: per-customer breakdown, one block per combo + one "Món lẻ" block per order -----
-  interface CustomerBlock {
-    stt: number;
-    customerName: string;
-    orderType: string; // combo name or "Món lẻ"
-    orderCode: string;
-    rows: { dishName: string; weight: string; bags: number; total: number }[];
-  }
-  const customerBlocks = useMemo(() => {
-    const blocks: CustomerBlock[] = [];
-    let stt = 0;
+  // ----- Tab 1.b: per-customer breakdown, grouped so each customer's orders stay together when printed -----
+  const customerGroups = useMemo(() => {
+    const map = new Map<string, CustomerGroup>();
+
     for (const o of filteredOrders) {
-      // "Món lẻ" block: all non-combo items of this order.
+      const key = o.customerId || `${o.customerName}|${o.customerPhone}`;
+      let group = map.get(key);
+      if (!group) {
+        group = {
+          customerId: key,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          customerAddress: o.customerAddress,
+          orders: [],
+          totalBags: 0,
+          totalGrams: 0,
+        };
+        map.set(key, group);
+      }
+
+      const sections: PrepSection[] = [];
+
       const singles = o.items.filter((it) => it.weight !== "Combo");
       if (singles.length > 0) {
-        blocks.push({
-          stt: ++stt,
-          customerName: o.customerName,
-          orderType: "Món lẻ",
-          orderCode: o.orderNumber,
-          rows: singles.map((it) => ({
-            dishName: it.mealName,
-            weight: it.weight,
-            bags: it.quantity,
-            total: it.quantity * parseWeightG(it.weight),
-          })),
+        const rows = singles.map((it) => ({
+          dishName: it.mealName,
+          weight: it.weight,
+          bags: it.quantity,
+          total: it.quantity * parseWeightG(it.weight),
+        }));
+        sections.push({
+          title: "Món lẻ",
+          badge: "Lẻ",
+          rows,
+          totalBags: rows.reduce((sum, row) => sum + row.bags, 0),
+          totalGrams: rows.reduce((sum, row) => sum + row.total, 0),
         });
       }
-      // One block per combo line.
+
       for (const it of o.items.filter((x) => x.weight === "Combo")) {
         const comboName = resolveComboName(it);
         const comps = comboName ? COMBO_COMPONENTS[comboName] : null;
-        const rows = comps
+        const rows: PrepRow[] = comps
           ? comps.map((c) => {
               const bags = c.quantity * it.quantity;
               return { dishName: c.name, weight: c.weight, bags, total: bags * parseWeightG(c.weight) };
             })
           : [{ dishName: it.mealName, weight: "Combo", bags: it.quantity, total: 0 }];
-        blocks.push({
-          stt: ++stt,
-          customerName: o.customerName,
-          orderType: comboName ?? it.mealName,
-          orderCode: o.orderNumber,
+
+        sections.push({
+          title: comboName ?? it.mealName,
+          badge: "Combo",
           rows,
+          totalBags: rows.reduce((sum, row) => sum + row.bags, 0),
+          totalGrams: rows.reduce((sum, row) => sum + row.total, 0),
         });
       }
+
+      const orderTotalBags = sections.reduce((sum, section) => sum + section.totalBags, 0);
+      const orderTotalGrams = sections.reduce((sum, section) => sum + section.totalGrams, 0);
+
+      group.orders.push({
+        orderId: o.id,
+        orderCode: o.orderNumber,
+        deliveryDate: o.deliveryDate,
+        status: o.status,
+        paymentStatus: o.paymentStatus,
+        sections,
+        totalBags: orderTotalBags,
+        totalGrams: orderTotalGrams,
+      });
+
+      group.totalBags += orderTotalBags;
+      group.totalGrams += orderTotalGrams;
     }
-    const totalGrams = blocks.reduce((s, b) => s + b.rows.reduce((ss, r) => ss + r.total, 0), 0);
-    return { blocks, totalGrams };
+
+    return [...map.values()];
   }, [filteredOrders, meals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats: Stat[] = useMemo(
@@ -308,12 +384,12 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
       {
         label: "Nhóm hàng",
         value: shopping.groups.length,
-        sub: `${customerBlocks.blocks.length} dòng khách`,
+        sub: `${customerGroups.length} khách`,
         icon: <Layers className="h-5 w-5" />,
         accent: "bg-orange-50 text-orange-600",
       },
     ],
-    [filteredOrders.length, shopping, customerBlocks.blocks.length],
+    [filteredOrders.length, shopping, customerGroups.length],
   );
 
   const resetFilters = () => {
@@ -323,12 +399,34 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
     setPayment("all");
   };
 
+  const filterSummary = [
+    fromDate ? `Từ ${formatDeliveryDate(fromDate)}` : "Từ đầu kỳ",
+    toDate ? `đến ${formatDeliveryDate(toDate)}` : "đến hiện tại",
+    delivery === "undelivered"
+      ? "Trạng thái giao: chưa giao"
+      : delivery === "delivered"
+        ? "Trạng thái giao: đã giao"
+        : "Trạng thái giao: tất cả",
+    payment === "paid" ? "Thanh toán: đã thanh toán" : payment === "unpaid" ? "Thanh toán: chưa thanh toán" : "Thanh toán: tất cả",
+  ].join(" · ");
+  const customerTotalGrams = customerGroups.reduce((sum, group) => sum + group.totalGrams, 0);
+
   return (
     <div className="space-y-6">
-      <StatStrip stats={stats} />
+      <div className="mf-print-only hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="text-base font-bold text-slate-900">MealFit - Tổng hợp đơn theo khách</div>
+        <div className="mt-1 text-xs text-slate-500">{filterSummary}</div>
+        <div className="mt-1 text-xs font-semibold text-slate-600">
+          {customerGroups.length} khách · {filteredOrders.length} đơn · {kg(customerTotalGrams)} kg
+        </div>
+      </div>
+
+      <div className="mf-print-hide">
+        <StatStrip stats={stats} />
+      </div>
 
       {/* Filter bar */}
-      <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="mf-print-hide rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-indigo-700" />
           <h4 className="text-sm font-bold text-slate-800">Bộ lọc đơn hàng</h4>
@@ -388,7 +486,7 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="mf-print-hide flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
         <button
           onClick={() => setTab("shopping")}
           className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-bold transition ${
@@ -412,7 +510,7 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
       {tab === "shopping" ? (
         <ShoppingTab shopping={shopping} />
       ) : (
-        <CustomerTab blocks={customerBlocks.blocks} totalGrams={customerBlocks.totalGrams} />
+        <CustomerTab groups={customerGroups} totalGrams={customerTotalGrams} onPrint={() => window.print()} />
       )}
     </div>
   );
@@ -532,79 +630,186 @@ function ShoppingTab({
 
 // ---------------- Tab 1.b ----------------
 function CustomerTab({
-  blocks,
+  groups,
   totalGrams,
+  onPrint,
 }: {
-  blocks: { stt: number; customerName: string; orderType: string; orderCode: string; rows: { dishName: string; weight: string; bags: number; total: number }[] }[];
+  groups: CustomerGroup[];
   totalGrams: number;
+  onPrint: () => void;
 }) {
-  if (blocks.length === 0) {
+  if (groups.length === 0) {
     return <EmptyState text="Không có đơn nào khớp bộ lọc để tổng hợp theo khách." />;
   }
+
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800">
-          <Users className="h-4 w-4 text-indigo-700" />
-          Đơn theo khách ({blocks.length} dòng)
-        </h4>
-        <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-          Tổng: {kg(totalGrams)} kg
-        </span>
+    <div className="space-y-4">
+      <div className="mf-print-hide flex items-start justify-between gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="space-y-1">
+          <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <Users className="h-4 w-4 text-indigo-700" />
+            Đơn theo khách ({groups.length} khách)
+          </h4>
+          <p className="text-[11px] text-slate-500">
+            Mỗi khách được giữ nguyên theo khối riêng khi in A4 để tránh cắt dở giữa chừng.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+            Tổng: {kg(totalGrams)} kg
+          </span>
+          <button onClick={onPrint} className="btn mf-print-hide bg-slate-900 text-white hover:bg-slate-800">
+            <Printer />
+            In A4
+          </button>
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs text-slate-600">
-          <thead className="border-b border-slate-100 bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-2.5 text-center">STT</th>
-              <th className="px-4 py-2.5">Tên khách</th>
-              <th className="px-4 py-2.5">Tên order</th>
-              <th className="px-4 py-2.5">Tên món</th>
-              <th className="px-4 py-2.5 text-right">Số túi</th>
-              <th className="px-4 py-2.5 text-center">Trọng lượng</th>
-              <th className="px-4 py-2.5 text-right">Tổng cộng (g)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {blocks.map((b) => (
-              <React.Fragment key={`${b.orderCode}-${b.stt}`}>
-                {b.rows.map((r, i) => (
-                  <tr key={`${b.stt}-${r.dishName}-${r.weight}-${i}`} className="border-b border-slate-50 hover:bg-slate-50/70">
-                    {i === 0 && (
-                      <td rowSpan={b.rows.length} className="border-r border-slate-100 px-4 py-2.5 text-center align-top font-bold text-slate-500">
-                        {b.stt}
-                      </td>
-                    )}
-                    {i === 0 && (
-                      <td rowSpan={b.rows.length} className="border-r border-slate-100 px-4 py-2.5 align-top font-bold text-slate-800">
-                        {b.customerName}
-                      </td>
-                    )}
-                    {i === 0 && (
-                      <td rowSpan={b.rows.length} className="border-r border-slate-100 px-4 py-2.5 align-top">
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                            b.orderType === "Món lẻ" ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {b.orderType}
-                        </span>
-                        <div className="mt-1 font-mono text-[9px] text-slate-400">{b.orderCode}</div>
-                      </td>
-                    )}
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{r.dishName}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-slate-700">{formatNumber(r.bags)}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-500">{r.weight}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-700">{formatNumber(r.total)}</td>
-                  </tr>
-                ))}
-              </React.Fragment>
+
+      {groups.map((group, groupIndex) => (
+        <section
+          key={group.customerId}
+          className={`mf-print-section overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm ${
+            groupIndex > 0 ? "mf-print-page-break-before" : ""
+          }`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h5 className="truncate text-sm font-bold text-slate-800">{group.customerName}</h5>
+                <span className="rounded bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-700">
+                  {group.orders.length} đơn
+                </span>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                <span className="font-mono font-semibold text-slate-600">{group.customerPhone}</span>
+                <span className="max-w-[48rem] truncate" title={group.customerAddress}>
+                  {group.customerAddress}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+              <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-indigo-700">
+                {formatNumber(group.totalBags)} túi
+              </span>
+              <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700">
+                {kg(group.totalGrams)} kg
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4">
+            {group.orders.map((order) => (
+              <article
+                key={order.orderId}
+                className="mf-print-order overflow-hidden rounded-lg border border-slate-100"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 bg-white px-3 py-2.5">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                        Đơn {order.orderCode}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-600">
+                        Giao: {formatDeliveryDate(order.deliveryDate)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+                      <span
+                        className={`rounded px-2 py-0.5 ${
+                          order.status === "Đã giao"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : order.status === "Đã hủy"
+                              ? "bg-rose-50 text-rose-700"
+                              : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                      <span
+                        className={`rounded px-2 py-0.5 ${
+                          order.paymentStatus === "Đã thanh toán"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {order.paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+                    <span className="rounded bg-slate-100 px-2.5 py-1">{formatNumber(order.totalBags)} túi</span>
+                    <span className="rounded bg-slate-100 px-2.5 py-1">{kg(order.totalGrams)} kg</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="mf-print-table w-full text-left text-xs text-slate-600">
+                    <thead className="border-b border-slate-100 bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2.5">Nhóm</th>
+                        <th className="px-3 py-2.5">Tên món</th>
+                        <th className="px-3 py-2.5 text-right">Số túi</th>
+                        <th className="px-3 py-2.5 text-center">Trọng lượng</th>
+                        <th className="px-3 py-2.5 text-right">Tổng cộng (g)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {order.sections.map((section, sectionIndex) => (
+                        <React.Fragment key={`${order.orderId}-${section.title}-${sectionIndex}`}>
+                          {section.rows.map((row, rowIndex) => (
+                            <tr key={`${order.orderId}-${section.title}-${rowIndex}`} className="border-b border-slate-50 hover:bg-slate-50/70">
+                              {rowIndex === 0 && (
+                                <td rowSpan={section.rows.length} className="border-r border-slate-100 px-3 py-2.5 align-top">
+                                  <div className="space-y-1">
+                                    <div className="font-bold text-slate-800">{section.title}</div>
+                                    <span
+                                      className={`inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                                        section.badge === "Combo" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+                                      }`}
+                                    >
+                                      {section.badge}
+                                    </span>
+                                  </div>
+                                </td>
+                              )}
+                              <td className="px-3 py-2.5 font-medium text-slate-700">{row.dishName}</td>
+                              <td className="px-3 py-2.5 text-right font-semibold text-slate-700">{formatNumber(row.bags)}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-500">
+                                  {row.weight}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-mono font-semibold text-slate-700">{formatNumber(row.total)}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-b-2 border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-700">
+                            <td className="px-3 py-2 text-right" colSpan={2}>
+                              Cộng {section.title}
+                            </td>
+                            <td className="px-3 py-2 text-right">{formatNumber(section.totalBags)}</td>
+                            <td className="px-3 py-2 text-center">-</td>
+                            <td className="px-3 py-2 text-right font-mono">{formatNumber(section.totalGrams)} g</td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-indigo-50 text-xs font-extrabold text-indigo-800">
+                        <td className="px-3 py-3" colSpan={2}>
+                          TỔNG ĐƠN
+                        </td>
+                        <td className="px-3 py-3 text-right">{formatNumber(order.totalBags)}</td>
+                        <td className="px-3 py-3 text-center">-</td>
+                        <td className="px-3 py-3 text-right">{kg(order.totalGrams)} kg</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </article>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
