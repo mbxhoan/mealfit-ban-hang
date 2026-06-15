@@ -242,6 +242,23 @@ export default function OrderManagement() {
   };
   const clearSelection = () => setSelectedIds(new Set());
 
+  // Aggregate stats over the currently selected orders.
+  const selectionSummary = useMemo(() => {
+    const sel = orders.filter((o) => selectedIds.has(o.id));
+    let grand = 0, profit = 0, paid = 0, unpaid = 0, delivered = 0, undelivered = 0, dishes = 0, combos = 0;
+    sel.forEach((o) => {
+      grand += o.totalAmount + o.deliveryFee;
+      profit += o.totalProfit;
+      o.paymentStatus === "Đã thanh toán" ? paid++ : unpaid++;
+      o.status === "Đã giao" ? delivered++ : undelivered++;
+      o.items.forEach((it) => {
+        if (it.weight === "Combo") combos += it.quantity;
+        else dishes += it.quantity;
+      });
+    });
+    return { count: sel.length, grand, profit, paid, unpaid, delivered, undelivered, dishes, combos };
+  }, [orders, selectedIds]);
+
   const stats: Stat[] = useMemo(() => {
     const revenue = orders.reduce((s, o) => s + o.totalAmount, 0);
     const profit = orders.reduce((s, o) => s + o.totalProfit, 0);
@@ -898,38 +915,59 @@ export default function OrderManagement() {
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-xl">
-          <div className="text-xs font-bold text-indigo-800 flex items-center gap-2">
-            <Check className="w-4 h-4" />
-            Đã chọn {selectedIds.size} đơn
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value=""
-              onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value as Order["status"]); }}
-              className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="">↳ Đổi giao hàng…</option>
-              {DELIVERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select
-              value=""
-              onChange={(e) => { if (e.target.value) bulkUpdatePayment(e.target.value as Order["paymentStatus"]); }}
-              className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="">↳ Đổi thanh toán…</option>
-              {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            {isAdmin && (
-              <button
-                onClick={() => setConfirmBulkDelete(true)}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-red-600 border border-red-200 bg-white hover:bg-red-50 px-3 py-1.5 rounded-lg cursor-pointer"
+        <div className="bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="text-xs font-bold text-indigo-800 flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Đã chọn {selectedIds.size} đơn
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value as Order["status"]); }}
+                className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Xóa
-              </button>
-            )}
-            <button onClick={clearSelection} className="text-[11px] font-bold text-slate-500 hover:text-slate-700 px-2 py-1.5">Bỏ chọn</button>
+                <option value="">↳ Đổi giao hàng…</option>
+                {DELIVERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) bulkUpdatePayment(e.target.value as Order["paymentStatus"]); }}
+                className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
+              >
+                <option value="">↳ Đổi thanh toán…</option>
+                {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              {isAdmin && (
+                <button
+                  onClick={() => setConfirmBulkDelete(true)}
+                  className="flex items-center gap-1.5 text-[11px] font-bold text-red-600 border border-red-200 bg-white hover:bg-red-50 px-3 py-1.5 rounded-lg cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Xóa
+                </button>
+              )}
+              <button onClick={clearSelection} className="text-[11px] font-bold text-slate-500 hover:text-slate-700 px-2 py-1.5">Bỏ chọn</button>
+            </div>
+          </div>
+
+          {/* Aggregate summary of selected orders */}
+          <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-indigo-200/70 text-[11px] font-semibold">
+            <span className="bg-white border border-indigo-100 rounded-lg px-2.5 py-1 text-slate-600">
+              Tổng tiền: <strong className="text-indigo-700">{formatVND(selectionSummary.grand)}</strong>
+            </span>
+            <span className="bg-white border border-indigo-100 rounded-lg px-2.5 py-1 text-slate-600">
+              Lãi gộp: <strong className="text-emerald-600">{formatVND(selectionSummary.profit)}</strong>
+            </span>
+            <span className="bg-white border border-indigo-100 rounded-lg px-2.5 py-1 text-slate-600">
+              Thanh toán: <strong className="text-emerald-600">{selectionSummary.paid} đã</strong> · <strong className="text-orange-600">{selectionSummary.unpaid} chưa</strong>
+            </span>
+            <span className="bg-white border border-indigo-100 rounded-lg px-2.5 py-1 text-slate-600">
+              Giao hàng: <strong className="text-emerald-600">{selectionSummary.delivered} đã</strong> · <strong className="text-sky-600">{selectionSummary.undelivered} chưa</strong>
+            </span>
+            <span className="bg-white border border-indigo-100 rounded-lg px-2.5 py-1 text-slate-600">
+              Món: <strong className="text-slate-800">{selectionSummary.dishes}</strong> · Combo: <strong className="text-slate-800">{selectionSummary.combos}</strong>
+            </span>
           </div>
         </div>
       )}
