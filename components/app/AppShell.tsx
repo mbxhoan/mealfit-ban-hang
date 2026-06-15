@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   Grid,
@@ -10,7 +11,6 @@ import {
   Users,
   TrendingUp,
   Upload,
-  HeartPulse,
   LogOut,
   Menu,
   X,
@@ -68,8 +68,8 @@ function SidebarBody({ user, onNavigate }: { user: SessionUser; onNavigate?: () 
   return (
     <div className="flex h-full flex-col bg-slate-800 text-slate-300">
       <div className="flex items-center gap-3 border-b border-slate-700 p-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
-          <HeartPulse className="h-5 w-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-sm">
+          <Image src="/logo.png" alt="MealFit VN" width={40} height={40} className="h-full w-full object-contain" priority />
         </div>
         <div>
           <span className="block text-sm font-bold tracking-tight text-white">MealFit</span>

@@ -125,17 +125,22 @@ async function main() {
   const customers = [...custMap.values()];
   await ok(`customers (${customers.length})`, db.from('mealfit_customers').upsert(customers, { onConflict: 'code' }));
 
-  // 4) Employees.
-  await ok(
-    'employees (2)',
-    db.from('mealfit_employees').upsert(
-      [
-        { code: 'admin', name: 'Quản trị viên', email: 'admin@example.com', role: 'admin', encrypted_password: 'admin123' },
-        { code: 'nhanvien', name: 'Nhân viên bán hàng', email: 'staff@example.com', role: 'staff', encrypted_password: 'staff123' },
-      ],
-      { onConflict: 'code' },
+  // 4) Employees — admin (login) + staff from the Nhân_viên sheet.
+  const staffNames = [
+    ...new Set(
+      sheet('Nhân_viên')
+        .map((r) => String(r['Tên Nhân Viên (KHÔNG ĐƯỢC TRÙNG)'] ?? '').trim())
+        .filter(Boolean),
     ),
-  );
+  ];
+  const employees = [
+    { code: 'admin', name: 'Quản trị viên', email: 'admin@example.com', role: 'admin', encrypted_password: 'admin123' },
+    ...staffNames.map((nm, i) => {
+      const code = slugify(nm) || `nv-${i + 1}`;
+      return { code, name: nm, email: `${code}@example.com`, role: 'staff', encrypted_password: 'staff123' };
+    }),
+  ];
+  await ok(`employees (${employees.length})`, db.from('mealfit_employees').upsert(employees, { onConflict: 'code' }));
 
   // Lookup maps for FK resolution.
   const { data: custRows } = await db.from('mealfit_customers').select('id, code');
@@ -144,6 +149,8 @@ async function main() {
   const prodByNameWeight = new Map((prodRows ?? []).map((r) => [`${r.name}|${r.weight}`, r.id]));
   const { data: comboRows2 } = await db.from('mealfit_combos').select('id, name');
   const comboByName = new Map((comboRows2 ?? []).map((r) => [r.name, r.id]));
+  const { data: empRows } = await db.from('mealfit_employees').select('id, name');
+  const empByName = new Map((empRows ?? []).map((r) => [r.name, r.id]));
 
   // 5) Group order items by order code.
   const ctRows = sheet('Chi_tiet_don_hang').filter((r) => /^DH\d+/.test(String(r['Mã đơn'] ?? '')));
@@ -169,6 +176,7 @@ async function main() {
     return {
       code,
       customer_id: custByCode.get(nameToCode.get(String(r['Tên KH'] ?? '').trim()) ?? '') ?? null,
+      employee_id: empByName.get(String(r['Nhân viên Giới thiệu'] ?? '').trim()) ?? null,
       order_date: parseDate(r['Ngày']) ?? '2026-01-01',
       total_quantity: parseNum(r['Tổng SL']),
       total_price: parseNum(r['Tổng CHƯA SHIP']),

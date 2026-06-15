@@ -4,6 +4,26 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-15 (b) — nâng bảng đơn hàng (sort/cột/lọc/phân trang/bulk/sửa) + sidebar logo MealFit
+
+- **Prompt summary**: Nâng bảng Quản lý đơn hàng thành table chuẩn: sort + auto width, chọn cột (lưu
+  state), lọc đa trường gọn 1 dropdown, phân trang (10/20/50/100, mặc định 10), mặc định sort theo
+  thời gian cập nhật mới nhất, chọn nhiều đơn để đổi trạng thái giao/thanh toán hoặc xóa, admin sửa
+  món/thông tin đơn (mọi trạng thái trừ `Đã hủy`). Sau đó đặt logo sidebar = logo MealFit.
+- **Scope**: MealFit UI (orders table) + branding sidebar.
+- **Main files changed**: `src/components/OrderManagement.tsx` (rewrite table: cấu hình cột, sort,
+  filter dropdown, pagination, bulk bar, edit-order modal), `src/data/mealPrepData.ts` (thêm
+  `Order.updatedAt?`; chuẩn hóa file về NFC), `components/app/AppShell.tsx` (sidebar logo dùng
+  `/logo.png`), `public/logo.png` (copy từ `app/icon.png`).
+- **Quyết định**: sửa đơn cho admin mọi trạng thái trừ `Đã hủy`; bulk đổi trạng thái cho cả 2 role,
+  bulk xóa admin-only (khớp nút xóa đơn lẻ).
+- **Tests run**: `npm run typecheck` (clean), `npm run build` (16 routes OK, `/orders` 15.9 kB).
+- **Commit message**: `feat(mealfit): nâng bảng đơn hàng (sort/cột/lọc/phân trang/bulk/sửa) + sidebar logo`
+- **Notes/Risks**: Sort "cập nhật mới nhất" dùng `updatedAt ?? createdAt`; offline lưu nguyên object
+  nên đúng ngay, Supabase mode chưa round-trip `updated_at` (fallback `createdAt`) — follow-up map
+  `updated_at` trong `lib/mealfit-repo.ts` nếu cần. Đã chuẩn hóa Unicode `mealPrepData.ts` +
+  `OrderManagement.tsx` về NFC (trước đó dạng hỗn hợp gây lệch literal type).
+
 ## 2026-06-15 — fix GitGuardian security leak warning by using example.com domains for demo accounts
 
 - **Prompt summary**: Resolve GitGuardian "Company Email Password exposed on GitHub" warning for the initial commit.

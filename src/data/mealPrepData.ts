@@ -47,11 +47,12 @@ export interface Order {
   totalCost: number;
   totalProfit: number;
   deliveryFee: number;
-  paymentMethod: "COD" | "Chuyển khoản" | "Tiền mặt";
+  paymentMethod: "COD" | "Chuyển khoản" | "Tiền mặt";
   paymentStatus: "Chưa thanh toán" | "Đã thanh toán";
   status: "Mới" | "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy";
   deliveryDate: string;
   createdAt: string;
+  updatedAt?: string;
   notes?: string;
 }
 
@@ -70,7 +71,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "cg-nv",
-    name: "Ức gà ngũ vị",
+    name: "Ức gà ngũ vị",
     code: "MF-CG-NV",
     category: "Ức gà",
     options: [
@@ -81,7 +82,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "cg-sc",
-    name: "Ức gà sả chanh",
+    name: "Ức gà sả chanh",
     code: "MF-CG-SC",
     category: "Ức gà",
     options: [
@@ -92,7 +93,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "cg-gt",
-    name: "Ứ́c gà gừng tỏi",
+    name: "Ứ́c gà gừng tỏi",
     code: "MF-CG-GT",
     category: "Ức gà",
     options: [
@@ -103,7 +104,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "cg-cr",
-    name: "Ức gà̀ cà ri",
+    name: "Ức gà̀ cà ri",
     code: "MF-CG-CR",
     category: "Ức gà",
     options: [
@@ -195,7 +196,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Cốt lết
   {
     id: "cl-mr",
-    name: "Cốt lết mè rang",
+    name: "Cốt lết mè rang",
     code: "MF-CL-MR",
     category: "Cốt lết",
     options: [
@@ -206,7 +207,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "cl-gt",
-    name: "Cốt lết gừng tỏi",
+    name: "Cốt lết gừng tỏi",
     code: "MF-CL-GT",
     category: "Cốt lết",
     options: [
@@ -252,7 +253,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Nạc heo
   {
     id: "nh-tb",
-    name: "Nạ̣c heo tây bắc",
+    name: "Nạ̣c heo tây bắc",
     code: "MF-NH-TB",
     category: "Nạc heo",
     options: [
@@ -263,7 +264,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "nh-sn",
-    name: "Nạc heo sả nghệ",
+    name: "Nạc heo sả nghệ",
     code: "MF-NH-SN",
     category: "Nạc heo",
     options: [
@@ -274,7 +275,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "nh-nv",
-    name: "Nạ̣c heo ngũ vị",
+    name: "Nạ̣c heo ngũ vị",
     code: "MF-NH-NV",
     category: "Nạc heo",
     options: [
@@ -298,7 +299,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Thăn bò
   {
     id: "tb-nv",
-    name: "Thăn bò ngũ vị",
+    name: "Thăn bò ngũ vị",
     code: "MF-TB-NV",
     category: "Thăn bò",
     options: [
@@ -309,7 +310,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "tb-tb",
-    name: "Thăn bò tây bắc",
+    name: "Thăn bò tây bắc",
     code: "MF-TB-TB",
     category: "Thăn bò",
     options: [
@@ -320,7 +321,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "tb-cj",
-    name: "Thăn bò̀ cajun",
+    name: "Thăn bò̀ cajun",
     code: "MF-TB-CJ",
     category: "Thăn bò",
     options: [
@@ -355,7 +356,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Tôm
   {
     id: "tm-gt",
-    name: "Tôm gừng tỏi",
+    name: "Tôm gừng tỏi",
     code: "MF-TM-GT",
     category: "Tôm",
     options: [
@@ -412,7 +413,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Cá thu
   {
     id: "ct-cr",
-    name: "Cá thu cà ri",
+    name: "Cá thu cà ri",
     code: "MF-CT-CR",
     category: "Cá thu",
     options: [
@@ -423,7 +424,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "ct-au",
-    name: "Cá thu kiểu Âu",
+    name: "Cá thu kiểu Âu",
     code: "MF-CT-AU",
     category: "Cá thu",
     options: [
@@ -436,7 +437,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Cá hồi
   {
     id: "ch-cj",
-    name: "Cá hồi cajun",
+    name: "Cá hồi cajun",
     code: "MF-CH-CJ",
     category: "Cá hồi",
     options: [
@@ -447,7 +448,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   },
   {
     id: "ch-au",
-    name: "Cá hồi kiểu âu",
+    name: "Cá hồi kiểu âu",
     code: "MF-CH-AU",
     category: "Cá hồi",
     options: [
@@ -493,7 +494,7 @@ export const INITIAL_MEAL_ITEMS: MealItem[] = [
   // Cá tầm
   {
     id: "ctl-ya",
-    name: "Cá tầm kiểu Ý",
+    name: "Cá tầm kiểu Ý",
     code: "MF-CTL-YA",
     category: "Cá tầm",
     options: [
@@ -853,7 +854,7 @@ export const INITIAL_ORDERS: Order[] = [
     totalCost: 571970, // 24.913*5 + 89.481*5 = 124.565 + 447.405 = 571.970
     totalProfit: 188030,
     deliveryFee: 30000,
-    paymentMethod: "Chuyển khoản",
+    paymentMethod: "Chuyển khoản",
     paymentStatus: "Đã thanh toán",
     status: "Đã giao",
     deliveryDate: "2026-06-12",
@@ -917,7 +918,7 @@ export const INITIAL_ORDERS: Order[] = [
     totalCost: 256549, // 31.282*4 + 43.807*3 = 125.128 + 131.421 = 256.549
     totalProfit: 128451,
     deliveryFee: 40000,
-    paymentMethod: "Chuyển khoản",
+    paymentMethod: "Chuyển khoản",
     paymentStatus: "Đã thanh toán",
     status: "Mới",
     deliveryDate: "2026-06-14",
