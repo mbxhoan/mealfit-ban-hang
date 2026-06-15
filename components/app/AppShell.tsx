@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  Plus,
 } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -113,10 +114,65 @@ const TITLES: Record<string, string> = {
   '/import': 'Nhập dữ liệu từ Excel',
 };
 
+// Mobile bottom navigation: 4 tabs + a highlighted center "Lên đơn" action.
+const BOTTOM_TABS: { href: string; label: string; icon: React.ReactNode }[] = [
+  { href: '/orders', label: 'Đơn hàng', icon: <ShoppingBag className="h-5 w-5" /> },
+  { href: '/products', label: 'Thực đơn', icon: <Tag className="h-5 w-5" /> },
+  { href: '/statistics', label: 'Thống kê', icon: <ClipboardList className="h-5 w-5" /> },
+  { href: '/reports', label: 'Báo cáo', icon: <TrendingUp className="h-5 w-5" /> },
+];
+
+function BottomNav() {
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const tab = (t: { href: string; label: string; icon: React.ReactNode }) => {
+    const active = isActive(t.href);
+    return (
+      <Link
+        key={t.href}
+        href={t.href}
+        className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-bold transition-colors ${
+          active ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+        }`}
+      >
+        {t.icon}
+        <span className="truncate">{t.label}</span>
+      </Link>
+    );
+  };
+
+  return (
+    <nav className="app-shell-print-hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur lg:hidden">
+      <div className="relative flex items-end pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+        {tab(BOTTOM_TABS[0])}
+        {tab(BOTTOM_TABS[1])}
+
+        {/* Center FAB: Lên đơn */}
+        <div className="flex w-20 shrink-0 justify-center">
+          <Link
+            href="/orders/new"
+            aria-label="Lên đơn"
+            className="-mt-6 flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 ring-4 ring-white transition-transform active:scale-95"
+          >
+            <Plus className="h-6 w-6" />
+            <span className="text-[8px] font-bold leading-none">Lên đơn</span>
+          </Link>
+        </div>
+
+        {tab(BOTTOM_TABS[2])}
+        {tab(BOTTOM_TABS[3])}
+      </div>
+    </nav>
+  );
+}
+
 export function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const title = TITLES[`/${pathname.split('/')[1] ?? ''}`] ?? 'MealFit';
+  // The mobile "Lên đơn" page provides its own bottom action bar.
+  const hideBottomNav = pathname.startsWith('/orders/new');
 
   return (
     <AuthProvider user={user}>
@@ -162,10 +218,12 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                 </span>
               </header>
 
-              <main className="mf-scroll flex-1 overflow-y-auto p-4 sm:p-6">
+              <main className={`mf-scroll flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 ${hideBottomNav ? '' : 'pb-24 lg:pb-6'}`}>
                 <div className="app-shell-content mf-fade mx-auto max-w-7xl">{children}</div>
               </main>
             </div>
+
+            {!hideBottomNav && <BottomNav />}
           </div>
         </DataProvider>
       </ToastProvider>
