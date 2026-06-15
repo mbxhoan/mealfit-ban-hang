@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Trash2 } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { formatBillVND } from "./invoice";
 import type { OrderDraft } from "./useOrderDraft";
 
@@ -55,17 +56,18 @@ export function OrderFormFields({ draft }: { draft: OrderDraft }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Chọn hồ sơ khách hàng</label>
-            <select
+            <SearchableSelect
               value={newOrderCustomerId}
-              onChange={(e) => handleCustomerSelection(e.target.value)}
-              className="w-full text-xs border border-slate-200 focus:border-indigo-500 outline-none bg-white font-semibold text-slate-700 rounded-lg p-2"
-            >
-              <option value="">-- Tạo mới thông tin khách hàng --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
-              ))}
-              <option value="NEW">+ Khách hàng vãng lai (Gõ tay)</option>
-            </select>
+              onChange={handleCustomerSelection}
+              ariaLabel="Chọn hồ sơ khách hàng"
+              searchPlaceholder="Tìm tên / số điện thoại..."
+              options={[
+                { value: "", label: "-- Tạo mới thông tin khách hàng --" },
+                ...customers.map((c) => ({ value: c.id, label: `${c.name} (${c.phone})` })),
+                { value: "NEW", label: "+ Khách hàng vãng lai (Gõ tay)" },
+              ]}
+              className="flex w-full items-center justify-between gap-2 text-xs border border-slate-200 focus:border-indigo-500 outline-none bg-white font-semibold text-slate-700 rounded-lg p-2"
+            />
           </div>
 
           <div>
@@ -116,35 +118,38 @@ export function OrderFormFields({ draft }: { draft: OrderDraft }) {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end bg-white p-3 border border-slate-100 rounded-lg">
           <div className="sm:col-span-2">
             <label className="block text-[10px] font-bold text-slate-400 mb-1">Tên món</label>
-            <select
+            <SearchableSelect
               value={currentMealId}
-              onChange={(e) => handleMealSelectionChange(e.target.value)}
-              className="w-full text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-semibold text-slate-700"
-            >
-              <option value="">-- Tìm chọn suất cơm --</option>
-              {meals.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.category} - {m.code})
-                </option>
-              ))}
-            </select>
+              onChange={handleMealSelectionChange}
+              ariaLabel="Chọn món"
+              placeholder="-- Tìm chọn suất cơm --"
+              searchPlaceholder="Tìm tên món / mã..."
+              options={[
+                { value: "", label: "-- Tìm chọn suất cơm --" },
+                ...meals.map((m) => ({ value: m.id, label: `${m.name} (${m.category} - ${m.code})` })),
+              ]}
+              className="flex w-full items-center justify-between gap-2 text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-semibold text-slate-700"
+            />
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-400 mb-1">Đóng gói</label>
-            <select
+            <SearchableSelect
               value={currentWeight}
-              onChange={(e) => setCurrentWeight(e.target.value)}
-              className="w-full text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
-            >
-              <option value="">-- Trọng lượng --</option>
-              {currentMealId &&
-                meals.find((m) => m.id === currentMealId)?.options.map((opt) => (
-                  <option key={opt.weight} value={opt.weight}>
-                    {opt.weight} ({formatBillVND(opt.price).replace("₫", "")})
-                  </option>
-                ))}
-            </select>
+              onChange={setCurrentWeight}
+              ariaLabel="Chọn đóng gói"
+              placeholder="-- Trọng lượng --"
+              options={[
+                { value: "", label: "-- Trọng lượng --" },
+                ...(currentMealId
+                  ? (meals.find((m) => m.id === currentMealId)?.options ?? []).map((opt) => ({
+                      value: opt.weight,
+                      label: `${opt.weight} (${formatBillVND(opt.price).replace("₫", "")})`,
+                    }))
+                  : []),
+              ]}
+              className="flex w-full items-center justify-between gap-2 text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
+            />
           </div>
 
           <div className="flex gap-2">
@@ -252,27 +257,33 @@ export function OrderFormFields({ draft }: { draft: OrderDraft }) {
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 mb-1">Hình thức thanh toán</label>
-            <select
+            <SearchableSelect
               value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}
-              className="w-full text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
-            >
-              <option value="Chuyển khoản">Chuyển khoản</option>
-              <option value="COD">Thu tiền mặt (COD)</option>
-              <option value="Tiền mặt">Tiền mặt tại quầy</option>
-            </select>
+              onChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+              searchable={false}
+              ariaLabel="Hình thức thanh toán"
+              options={[
+                { value: "Chuyển khoản", label: "Chuyển khoản" },
+                { value: "COD", label: "Thu tiền mặt (COD)" },
+                { value: "Tiền mặt", label: "Tiền mặt tại quầy" },
+              ]}
+              className="flex w-full items-center justify-between gap-2 text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
+            />
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 mb-1">Trạng thái thanh toán của khách</label>
-            <select
+            <SearchableSelect
               value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value as typeof paymentStatus)}
-              className="w-full text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
-            >
-              <option value="Chưa thanh toán">Chờ thanh toán (Chưa trả)</option>
-              <option value="Đã thanh toán">Đã hoàn tất thanh toán</option>
-            </select>
+              onChange={(v) => setPaymentStatus(v as typeof paymentStatus)}
+              searchable={false}
+              ariaLabel="Trạng thái thanh toán"
+              options={[
+                { value: "Chưa thanh toán", label: "Chờ thanh toán (Chưa trả)" },
+                { value: "Đã thanh toán", label: "Đã hoàn tất thanh toán" },
+              ]}
+              className="flex w-full items-center justify-between gap-2 text-xs border border-slate-200 p-2 rounded-lg bg-white outline-none font-bold text-slate-700"
+            />
           </div>
 
           <div className="sm:col-span-2">

@@ -6,6 +6,8 @@ import { COMBO_COMPONENTS } from "../data/comboComponents";
 import { CATEGORY_EMOJI } from "@/lib/menu";
 import { formatNumber } from "@/lib/format";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { currentWeek, rangeForPreset, type DatePreset } from "@/lib/dateRange";
 import {
   ShoppingCart,
   Users,
@@ -125,10 +127,21 @@ interface CustomerGroup {
 
 export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
   const [tab, setTab] = useState<Tab>("shopping");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  // Default the kitchen view to the current week; allow month or a custom range.
+  const [preset, setPreset] = useState<DatePreset>("week");
+  const [fromDate, setFromDate] = useState<string>(() => currentWeek().from);
+  const [toDate, setToDate] = useState<string>(() => currentWeek().to);
   const [delivery, setDelivery] = useState<DeliveryFilter>("undelivered");
   const [payment, setPayment] = useState<PaymentFilter>("all");
+
+  const applyPreset = (p: DatePreset) => {
+    setPreset(p);
+    if (p !== "custom") {
+      const r = rangeForPreset(p, { from: fromDate, to: toDate });
+      setFromDate(r.from);
+      setToDate(r.to);
+    }
+  };
 
   // Dish name -> category, built from the live menu (combo children only carry a name).
   const categoryByName = useMemo(() => {
@@ -393,13 +406,19 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
   );
 
   const resetFilters = () => {
-    setFromDate("");
-    setToDate("");
+    const w = currentWeek();
+    setPreset("week");
+    setFromDate(w.from);
+    setToDate(w.to);
     setDelivery("undelivered");
     setPayment("all");
   };
 
+  const presetLabel =
+    preset === "week" ? "Tuần này" : preset === "month" ? "Tháng này" : preset === "all" ? "Tất cả" : "Tùy chọn";
+
   const filterSummary = [
+    `Kỳ: ${presetLabel}`,
     fromDate ? `Từ ${formatDeliveryDate(fromDate)}` : "Từ đầu kỳ",
     toDate ? `đến ${formatDeliveryDate(toDate)}` : "đến hiện tại",
     delivery === "undelivered"
@@ -414,10 +433,14 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
   return (
     <div className="space-y-6">
       <div className="mf-print-only hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="text-base font-bold text-slate-900">MealFit - Tổng hợp đơn theo khách</div>
+        <div className="text-base font-bold text-slate-900">
+          {tab === "shopping" ? "MealFit - Tổng hợp đi chợ" : "MealFit - Tổng hợp đơn theo khách"}
+        </div>
         <div className="mt-1 text-xs text-slate-500">{filterSummary}</div>
         <div className="mt-1 text-xs font-semibold text-slate-600">
-          {customerGroups.length} khách · {filteredOrders.length} đơn · {kg(customerTotalGrams)} kg
+          {tab === "shopping"
+            ? `${shopping.groups.length} nhóm hàng · ${formatNumber(shopping.totalBags)} gói · ${kg(shopping.totalGrams)} kg`
+            : `${customerGroups.length} khách · ${filteredOrders.length} đơn · ${kg(customerTotalGrams)} kg`}
         </div>
       </div>
 
@@ -434,11 +457,29 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase text-slate-500">Kỳ</span>
+            <div className="w-36">
+              <SearchableSelect
+                value={preset}
+                onChange={(v) => applyPreset(v as DatePreset)}
+                searchable={false}
+                ariaLabel="Chọn kỳ thống kê"
+                options={[
+                  { value: "week", label: "Tuần này" },
+                  { value: "month", label: "Tháng này" },
+                  { value: "custom", label: "Tùy chọn" },
+                  { value: "all", label: "Tất cả" },
+                ]}
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
+              />
+            </div>
+          </label>
+          <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase text-slate-500">Từ ngày (giao)</span>
             <input
               type="date"
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+              onChange={(e) => { setFromDate(e.target.value); setPreset("custom"); }}
               className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-500"
             />
           </label>
@@ -447,33 +488,43 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
             <input
               type="date"
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+              onChange={(e) => { setToDate(e.target.value); setPreset("custom"); }}
               className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-500"
             />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase text-slate-500">Trạng thái giao</span>
-            <select
-              value={delivery}
-              onChange={(e) => setDelivery(e.target.value as DeliveryFilter)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
-            >
-              <option value="undelivered">Chưa giao hàng</option>
-              <option value="delivered">Đã giao</option>
-              <option value="all">Tất cả (trừ đã hủy)</option>
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={delivery}
+                onChange={(v) => setDelivery(v as DeliveryFilter)}
+                searchable={false}
+                ariaLabel="Lọc trạng thái giao"
+                options={[
+                  { value: "undelivered", label: "Chưa giao hàng" },
+                  { value: "delivered", label: "Đã giao" },
+                  { value: "all", label: "Tất cả (trừ đã hủy)" },
+                ]}
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
+              />
+            </div>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase text-slate-500">Thanh toán</span>
-            <select
-              value={payment}
-              onChange={(e) => setPayment(e.target.value as PaymentFilter)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
-            >
-              <option value="all">Tất cả</option>
-              <option value="paid">Đã thanh toán</option>
-              <option value="unpaid">Chưa thanh toán</option>
-            </select>
+            <div className="w-40">
+              <SearchableSelect
+                value={payment}
+                onChange={(v) => setPayment(v as PaymentFilter)}
+                searchable={false}
+                ariaLabel="Lọc thanh toán"
+                options={[
+                  { value: "all", label: "Tất cả" },
+                  { value: "paid", label: "Đã thanh toán" },
+                  { value: "unpaid", label: "Chưa thanh toán" },
+                ]}
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
+              />
+            </div>
           </label>
           <button
             onClick={resetFilters}
@@ -508,7 +559,7 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
       </div>
 
       {tab === "shopping" ? (
-        <ShoppingTab shopping={shopping} />
+        <ShoppingTab shopping={shopping} onPrint={() => window.print()} />
       ) : (
         <CustomerTab groups={customerGroups} totalGrams={customerTotalGrams} onPrint={() => window.print()} />
       )}
@@ -519,18 +570,32 @@ export default function StatisticsView({ orders, meals }: StatisticsViewProps) {
 // ---------------- Tab 1.a ----------------
 function ShoppingTab({
   shopping,
+  onPrint,
 }: {
   shopping: {
     groups: { category: string; bags: number; grams: number; rows: { dishName: string; weight: string; isCombo: boolean; bags: number; grams: number }[] }[];
     totalBags: number;
     totalGrams: number;
   };
+  onPrint: () => void;
 }) {
   if (shopping.groups.length === 0) {
     return <EmptyState text="Không có đơn nào khớp bộ lọc để tổng hợp đi chợ." />;
   }
   return (
     <div className="space-y-6">
+      {/* Header + print */}
+      <div className="mf-print-hide flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+          <ShoppingCart className="h-4 w-4 text-indigo-700" />
+          Bảng tổng hợp đi chợ
+        </h4>
+        <button onClick={onPrint} className="btn mf-print-hide bg-slate-900 text-white hover:bg-slate-800">
+          <Printer />
+          In A4
+        </button>
+      </div>
+
       {/* Category kg totals — quick "đi chợ" glance */}
       <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800">
@@ -561,7 +626,7 @@ function ShoppingTab({
       {/* Detailed table grouped by category */}
       <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
+          <table className="mf-print-table w-full text-left text-xs text-slate-600">
             <thead className="border-b border-slate-100 bg-slate-50 text-[10px] font-semibold uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Danh mục</th>
@@ -573,6 +638,15 @@ function ShoppingTab({
               </tr>
             </thead>
             <tbody>
+              {/* Grand total pinned to the top for a quick "đi chợ" read */}
+              <tr className="border-b-2 border-indigo-200 bg-indigo-50 text-xs font-extrabold text-indigo-800">
+                <td className="px-4 py-3" colSpan={3}>
+                  TỔNG CỘNG ĐI CHỢ
+                </td>
+                <td className="px-4 py-3 text-right">{formatNumber(shopping.totalBags)}</td>
+                <td className="px-4 py-3 text-right font-mono">{formatNumber(shopping.totalGrams)}</td>
+                <td className="px-4 py-3 text-right font-mono">{kg(shopping.totalGrams)} kg</td>
+              </tr>
               {shopping.groups.map((g) => (
                 <React.Fragment key={g.category}>
                   {g.rows.map((r, i) => (
@@ -611,16 +685,6 @@ function ShoppingTab({
                 </React.Fragment>
               ))}
             </tbody>
-            <tfoot>
-              <tr className="bg-indigo-50 text-xs font-extrabold text-indigo-800">
-                <td className="px-4 py-3" colSpan={3}>
-                  TỔNG CỘNG ĐI CHỢ
-                </td>
-                <td className="px-4 py-3 text-right">{formatNumber(shopping.totalBags)}</td>
-                <td className="px-4 py-3 text-right font-mono">{formatNumber(shopping.totalGrams)}</td>
-                <td className="px-4 py-3 text-right font-mono">{kg(shopping.totalGrams)} kg</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       </div>

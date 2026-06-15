@@ -12,6 +12,7 @@ import { Drawer } from "@/components/ui/Drawer";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 /** Downscale + compress an image file to a small JPEG data URL (keeps localStorage/DB light). */
 async function fileToDataUrl(file: File, max = 480): Promise<string> {
@@ -375,11 +376,13 @@ export default function MealManagement() {
           ) : (
             <>
               <Field label="Nhóm danh mục">
-                <select className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <option key={c} value={c}>{c === "OTHER" ? "Nhóm khác (điền tay)…" : c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={category}
+                  onChange={setCategory}
+                  ariaLabel="Nhóm danh mục"
+                  options={CATEGORY_OPTIONS.map((c) => ({ value: c, label: c === "OTHER" ? "Nhóm khác (điền tay)…" : c }))}
+                  className={`${inputClass} flex items-center justify-between gap-2 text-left`}
+                />
               </Field>
               {category === "OTHER" && (
                 <Field label="Tên nhóm mới" required>

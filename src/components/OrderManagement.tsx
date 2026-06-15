@@ -10,6 +10,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useOrderDraft } from "./order/useOrderDraft";
 import { OrderFormFields } from "./order/OrderFormFields";
 import { OrderBillView } from "./order/OrderBillView";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { currentWeek, rangeForPreset, type DatePreset } from "@/lib/dateRange";
 import {
   ShoppingBag,
   Search,
@@ -22,6 +24,7 @@ import {
   FileText,
   Wallet,
   AlertCircle,
+  Calendar,
   Columns3,
   ChevronUp,
   ChevronDown,
@@ -110,6 +113,19 @@ export default function OrderManagement() {
   const [pageSize, setPageSize] = useState<number>(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Delivery-date filter — defaults to the current week, with month / custom / all presets.
+  const [datePreset, setDatePreset] = useState<DatePreset>("week");
+  const [dateFrom, setDateFrom] = useState<string>(() => currentWeek().from);
+  const [dateTo, setDateTo] = useState<string>(() => currentWeek().to);
+  const applyDatePreset = (p: DatePreset) => {
+    setDatePreset(p);
+    if (p !== "custom") {
+      const r = rangeForPreset(p, { from: dateFrom, to: dateTo });
+      setDateFrom(r.from);
+      setDateTo(r.to);
+    }
+  };
+
   // Modal helpers backed by the shared order-draft hook.
   const openAddModal = () => { draft.reset(); setShowAddModal(true); };
   const openEditModal = (order: Order) => { draft.loadOrder(order); setShowAddModal(true); };
@@ -158,9 +174,12 @@ export default function OrderManagement() {
       const matchStatus = filters.status.length === 0 || filters.status.includes(o.status);
       const matchPay = filters.paymentStatus.length === 0 || filters.paymentStatus.includes(o.paymentStatus);
       const matchMethod = filters.paymentMethod.length === 0 || filters.paymentMethod.includes(o.paymentMethod);
-      return matchSearch && matchStatus && matchPay && matchMethod;
+      const d = o.deliveryDate || "";
+      const matchFrom = !dateFrom || d >= dateFrom;
+      const matchTo = !dateTo || d <= dateTo;
+      return matchSearch && matchStatus && matchPay && matchMethod && matchFrom && matchTo;
     });
-  }, [orders, computedSearchTerm, filters]);
+  }, [orders, computedSearchTerm, filters, dateFrom, dateTo]);
 
   // Sort
   const sortedOrders = useMemo(() => {
@@ -182,7 +201,7 @@ export default function OrderManagement() {
   );
 
   // Reset to first page when the result set shrinks/changes.
-  useEffect(() => { setPage(1); }, [computedSearchTerm, filters, pageSize]);
+  useEffect(() => { setPage(1); }, [computedSearchTerm, filters, pageSize, dateFrom, dateTo]);
 
   const activeFilterCount = filters.status.length + filters.paymentStatus.length + filters.paymentMethod.length;
 
@@ -316,37 +335,43 @@ export default function OrderManagement() {
   };
 
   const renderStatusSelect = (order: Order) => (
-    <select
+    <SearchableSelect
       value={order.status}
-      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as Order["status"])}
-      className={`text-[10px] px-2 py-1 font-bold rounded-lg border focus:outline-none ${
+      onChange={(v) => handleUpdateOrderStatus(order.id, v as Order["status"])}
+      searchable={false}
+      ariaLabel="Đổi trạng thái giao"
+      options={[
+        { value: "Mới", label: "Mới nhận" },
+        { value: "Đang xử lý", label: "Đang chế biến" },
+        { value: "Đang giao", label: "Đang giao hàng" },
+        { value: "Đã giao", label: "Đã hoàn tất" },
+        { value: "Đã hủy", label: "Đã hủy bỏ" },
+      ]}
+      className={`flex items-center justify-between gap-1 text-[10px] px-2 py-1 font-bold rounded-lg border focus:outline-none ${
         order.status === "Mới" ? "bg-red-50 text-red-700 border-red-200" :
         order.status === "Đang xử lý" ? "bg-amber-50 text-amber-700 border-amber-200" :
         order.status === "Đang giao" ? "bg-sky-50 text-sky-700 border-sky-200" :
         order.status === "Đã giao" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
         "bg-slate-100 text-slate-500 border-slate-200"
       }`}
-    >
-      <option value="Mới">Mới nhận</option>
-      <option value="Đang xử lý">Đang chế biến</option>
-      <option value="Đang giao">Đang giao hàng</option>
-      <option value="Đã giao">Đã hoàn tất</option>
-      <option value="Đã hủy">Đã hủy bỏ</option>
-    </select>
+    />
   );
 
   const renderPaymentSelect = (order: Order) => (
     <>
-      <select
+      <SearchableSelect
         value={order.paymentStatus}
-        onChange={(e) => handleUpdatePaymentStatus(order.id, e.target.value as Order["paymentStatus"])}
-        className={`text-[10px] px-2 py-1 font-bold rounded-lg border focus:outline-none ${
+        onChange={(v) => handleUpdatePaymentStatus(order.id, v as Order["paymentStatus"])}
+        searchable={false}
+        ariaLabel="Đổi trạng thái thanh toán"
+        options={[
+          { value: "Chưa thanh toán", label: "Chưa trả" },
+          { value: "Đã thanh toán", label: "Đã trả tiền" },
+        ]}
+        className={`flex items-center justify-between gap-1 text-[10px] px-2 py-1 font-bold rounded-lg border focus:outline-none ${
           order.paymentStatus === "Đã thanh toán" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-orange-50 text-orange-700 border-orange-200"
         }`}
-      >
-        <option value="Chưa thanh toán">Chưa trả</option>
-        <option value="Đã thanh toán">Đã trả tiền</option>
-      </select>
+      />
       <div className="text-[9px] text-slate-400 mt-1 font-medium">{order.paymentMethod}</div>
     </>
   );
@@ -419,6 +444,50 @@ export default function OrderManagement() {
   return (
     <div className="space-y-6">
       <StatStrip stats={stats} />
+
+      {/* Delivery-date filter bar */}
+      <div className="flex flex-wrap items-end gap-3 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 mr-1">
+          <Calendar className="h-4 w-4 text-indigo-700" />
+          <span className="text-xs font-bold text-slate-800">Lọc theo ngày giao</span>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Kỳ</span>
+          <div className="w-36">
+            <SearchableSelect
+              value={datePreset}
+              onChange={(v) => applyDatePreset(v as DatePreset)}
+              searchable={false}
+              ariaLabel="Chọn kỳ"
+              options={[
+                { value: "week", label: "Tuần này" },
+                { value: "month", label: "Tháng này" },
+                { value: "custom", label: "Tùy chọn" },
+                { value: "all", label: "Tất cả" },
+              ]}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500"
+            />
+          </div>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Từ ngày</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setDatePreset("custom"); }}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-500"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Đến ngày</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setDatePreset("custom"); }}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-500"
+          />
+        </label>
+      </div>
 
       {/* Search and control row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
@@ -517,22 +586,28 @@ export default function OrderManagement() {
               Đã chọn {selectedIds.size} đơn
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                value=""
-                onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value as Order["status"]); }}
-                className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
-              >
-                <option value="">↳ Đổi giao hàng…</option>
-                {DELIVERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select
-                value=""
-                onChange={(e) => { if (e.target.value) bulkUpdatePayment(e.target.value as Order["paymentStatus"]); }}
-                className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
-              >
-                <option value="">↳ Đổi thanh toán…</option>
-                {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="w-40">
+                <SearchableSelect
+                  value=""
+                  onChange={(v) => { if (v) bulkUpdateStatus(v as Order["status"]); }}
+                  searchable={false}
+                  placeholder="↳ Đổi giao hàng…"
+                  ariaLabel="Đổi giao hàng hàng loạt"
+                  options={DELIVERY_STATUSES.map((s) => ({ value: s, label: s }))}
+                  className="flex w-full items-center justify-between gap-1 text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
+                />
+              </div>
+              <div className="w-40">
+                <SearchableSelect
+                  value=""
+                  onChange={(v) => { if (v) bulkUpdatePayment(v as Order["paymentStatus"]); }}
+                  searchable={false}
+                  placeholder="↳ Đổi thanh toán…"
+                  ariaLabel="Đổi thanh toán hàng loạt"
+                  options={PAYMENT_STATUSES.map((s) => ({ value: s, label: s }))}
+                  className="flex w-full items-center justify-between gap-1 text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
+                />
+              </div>
               {isAdmin && (
                 <button
                   onClick={() => setConfirmBulkDelete(true)}
@@ -663,13 +738,16 @@ export default function OrderManagement() {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
               <span>Hiển thị</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="border border-slate-200 rounded-lg px-2 py-1 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
-              >
-                {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="w-20">
+                <SearchableSelect
+                  value={String(pageSize)}
+                  onChange={(v) => setPageSize(Number(v))}
+                  searchable={false}
+                  ariaLabel="Số dòng mỗi trang"
+                  options={PAGE_SIZES.map((s) => ({ value: String(s), label: String(s) }))}
+                  className="flex w-full items-center justify-between gap-1 border border-slate-200 rounded-lg px-2 py-1 bg-white font-semibold text-slate-700 outline-none cursor-pointer"
+                />
+              </div>
               <span>/ trang · Tổng {sortedOrders.length} đơn</span>
             </div>
             <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
