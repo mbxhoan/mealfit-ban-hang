@@ -28,8 +28,19 @@ export async function getMeals(): Promise<MealItem[]> {
       margin: Number(r.profit_margin),
     };
     const existing = byKey.get(base);
-    if (existing) existing.options.push(opt);
-    else byKey.set(base, { id: base, name: r.name, code: base, category: r.category ?? '', options: [opt] });
+    if (existing) {
+      existing.options.push(opt);
+      if (!existing.imageUrl && r.image_url) existing.imageUrl = r.image_url;
+    } else {
+      byKey.set(base, {
+        id: base,
+        name: r.name,
+        code: base,
+        category: r.category ?? '',
+        options: [opt],
+        imageUrl: r.image_url ?? undefined,
+      });
+    }
   }
   for (const item of byKey.values()) item.options.sort((a, b) => w(a.weight) - w(b.weight));
 
@@ -38,6 +49,7 @@ export async function getMeals(): Promise<MealItem[]> {
     name: c.name,
     code: c.code,
     category: 'Combo',
+    imageUrl: c.image_url ?? undefined,
     options: [
       {
         weight: 'Combo',
@@ -140,6 +152,7 @@ export async function upsertMeal(meal: MealItem): Promise<void> {
         cost_price: o.cost,
         profit: o.profit,
         profit_margin: o.margin,
+        image_url: meal.imageUrl ?? null,
       },
       { onConflict: 'code' },
     );
@@ -156,6 +169,7 @@ export async function upsertMeal(meal: MealItem): Promise<void> {
     sell_price: o.price,
     profit: o.profit,
     profit_margin: o.margin,
+    image_url: meal.imageUrl ?? null,
   }));
   await db.from('mealfit_products').upsert(rows, { onConflict: 'code' });
 }

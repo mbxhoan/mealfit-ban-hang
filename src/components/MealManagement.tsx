@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { MealItem, PricingOption } from "../data/mealPrepData";
-import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent } from "lucide-react";
+import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent, ImagePlus, X, Pencil } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
+import { CATEGORY_EMOJI } from "@/lib/menu";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
 import { useToast } from "@/components/ui/Toast";
 import { useIsAdmin } from "@/contexts/AuthContext";
@@ -11,6 +12,22 @@ import { Drawer } from "@/components/ui/Drawer";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
+
+/** Downscale + compress an image file to a small JPEG data URL (keeps localStorage/DB light). */
+async function fileToDataUrl(file: File, max = 480): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas context");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
 
 const CATEGORY_OPTIONS = [
   "Ức gà", "Đùi gà", "Cốt lết", "Nạc heo", "Thăn bò",
@@ -27,6 +44,10 @@ export default function MealManagement() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<MealItem | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imgBusy, setImgBusy] = useState(false);
 
   // Form
   const [name, setName] = useState("");
@@ -67,10 +88,49 @@ export default function MealManagement() {
     });
   }, [meals, selectedCategory, searchTerm]);
 
-  const openDrawer = () => {
+  const openCreate = () => {
+    setEditingId(null);
     setName(""); setCode(""); setCategory("Ức gà"); setCustomCategory("");
-    setIsCombo(false); setHas100g(true); setHas150g(true); setHas200g(true);
+    setIsCombo(false); setImageUrl("");
+    setHas100g(true); setP100(25000); setC100(16000);
+    setHas150g(true); setP150(36000); setC150(24000);
+    setHas200g(true); setP200(48000); setC200(32000);
+    setPCombo(219000); setCCombo(172000);
     setDrawerOpen(true);
+  };
+
+  const openEdit = (meal: MealItem) => {
+    setEditingId(meal.id);
+    setName(meal.name); setCode(meal.code); setImageUrl(meal.imageUrl ?? "");
+    const combo = meal.category === "Combo";
+    setIsCombo(combo);
+    if (combo) {
+      const o = meal.options[0];
+      setPCombo(o?.price ?? 0); setCCombo(o?.cost ?? 0);
+    } else {
+      const known = CATEGORY_OPTIONS.includes(meal.category);
+      setCategory(known ? meal.category : "OTHER");
+      setCustomCategory(known ? "" : meal.category);
+      const find = (wgt: string) => meal.options.find((o) => o.weight === wgt);
+      const o1 = find("100g"); setHas100g(!!o1); if (o1) { setP100(o1.price); setC100(o1.cost); }
+      const o15 = find("150g"); setHas150g(!!o15); if (o15) { setP150(o15.price); setC150(o15.cost); }
+      const o2 = find("200g"); setHas200g(!!o2); if (o2) { setP200(o2.price); setC200(o2.cost); }
+    }
+    setDrawerOpen(true);
+  };
+
+  const pickImage = async (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Vui lòng chọn tệp ảnh.");
+    setImgBusy(true);
+    try {
+      setImageUrl(await fileToDataUrl(file));
+    } catch {
+      toast.error("Không đọc được ảnh. Thử ảnh khác.");
+    } finally {
+      setImgBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const buildOption = (weight: string, price: number, cost: number): PricingOption => {
@@ -96,10 +156,17 @@ export default function MealManagement() {
     if (options.some((o) => o.price < o.cost)) return toast.error("Giá bán không được nhỏ hơn giá vốn.");
 
     setSaving(true);
-    const item: MealItem = { id: `meal-${Date.now()}`, name: name.trim(), code: code.trim(), category: finalCategory, options };
+    const item: MealItem = {
+      id: editingId ?? `meal-${Date.now()}`,
+      name: name.trim(),
+      code: code.trim(),
+      category: finalCategory,
+      options,
+      imageUrl: imageUrl || undefined,
+    };
     try {
       await saveMeal(item);
-      toast.success(`Đã thêm món "${item.name}".`);
+      toast.success(editingId ? `Đã cập nhật "${item.name}".` : `Đã thêm món "${item.name}".`);
       setDrawerOpen(false);
     } catch {
       toast.error("Lưu thất bại. Vui lòng thử lại.");
@@ -153,7 +220,7 @@ export default function MealManagement() {
             ))}
           </div>
           {isAdmin && (
-            <Button icon={<Plus />} onClick={openDrawer} className="ml-auto sm:ml-0">
+            <Button icon={<Plus />} onClick={openCreate} className="ml-auto sm:ml-0">
               Thêm món
             </Button>
           )}
@@ -164,19 +231,38 @@ export default function MealManagement() {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {filteredMeals.map((meal) => (
           <div key={meal.id} className="flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-shadow hover:shadow-md">
-            <div className="relative border-b border-slate-50 p-4">
-              <span className="rounded-full bg-slate-100/70 p-1 px-2.5 text-[10px] font-bold uppercase text-slate-400">{meal.category}</span>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setConfirm(meal)}
-                  className="absolute right-3 top-3 rounded-full p-1 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
-                  title="Xóa món ăn"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+            {/* Media strip: photo if set, else category emoji */}
+            <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-50 to-slate-50">
+              {meal.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={meal.imageUrl} alt={meal.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-5xl opacity-80">{CATEGORY_EMOJI[meal.category] ?? "🍽️"}</span>
               )}
-              <h4 className="mt-3 text-left text-sm font-bold tracking-tight text-slate-800">{meal.name}</h4>
+              <span className="absolute left-2.5 top-2.5 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-500 backdrop-blur">{meal.category}</span>
+              {isAdmin && (
+                <div className="absolute right-2.5 top-2.5 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(meal)}
+                    className="rounded-full bg-white/85 p-1.5 text-slate-500 backdrop-blur transition-colors hover:bg-brand-50 hover:text-brand-600"
+                    title="Sửa / thêm ảnh"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirm(meal)}
+                    className="rounded-full bg-white/85 p-1.5 text-slate-400 backdrop-blur transition-colors hover:bg-red-50 hover:text-red-500"
+                    title="Xóa món ăn"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="border-b border-slate-50 p-4">
+              <h4 className="text-left text-sm font-bold tracking-tight text-slate-800">{meal.name}</h4>
               <p className="mt-1 text-left font-mono text-[10px] font-bold text-brand-600">CODE: {meal.code}</p>
             </div>
 
@@ -220,17 +306,49 @@ export default function MealManagement() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title="Thêm món ăn mới"
-        subtitle="Cấu hình giá theo từng mức trọng lượng"
+        title={editingId ? "Sửa món ăn" : "Thêm món ăn mới"}
+        subtitle="Ảnh, giá theo trọng lượng — ảnh sẽ hiển thị trên trang chủ"
         widthClass="max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setDrawerOpen(false)}>Hủy</Button>
-            <Button icon={<Save />} loading={saving} onClick={handleSave}>Lưu món ăn</Button>
+            <Button icon={<Save />} loading={saving} onClick={handleSave}>{editingId ? "Cập nhật" : "Lưu món ăn"}</Button>
           </div>
         }
       >
         <div className="space-y-4">
+          {/* Product photo */}
+          <Field label="Ảnh món ăn (tùy chọn)">
+            <div className="flex items-center gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="Xem trước" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-3xl opacity-70">{isCombo ? "🥗" : CATEGORY_EMOJI[category] ?? "🍽️"}</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => pickImage(e.target.files?.[0])}
+                />
+                <Button variant="secondary" icon={<ImagePlus />} loading={imgBusy} onClick={() => fileRef.current?.click()}>
+                  {imageUrl ? "Đổi ảnh" : "Tải ảnh lên"}
+                </Button>
+                {imageUrl && (
+                  <button type="button" onClick={() => setImageUrl("")} className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-500 hover:underline">
+                    <X className="h-3.5 w-3.5" /> Gỡ ảnh
+                  </button>
+                )}
+                <p className="text-[10px] text-slate-400">Tự nén còn ~480px. Món chưa có ảnh sẽ hiển thị icon.</p>
+              </div>
+            </div>
+          </Field>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Tên suất ăn" required>
               <input className={inputClass} placeholder="Ức gà sốt tiêu xanh" value={name} onChange={(e) => setName(e.target.value)} />

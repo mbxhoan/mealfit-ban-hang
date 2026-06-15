@@ -12,6 +12,8 @@ export interface MealItem {
   code: string;
   category: string;
   options: PricingOption[];
+  /** Optional product photo (Supabase URL or compressed data URL). Falls back to a category emoji on the home page. */
+  imageUrl?: string;
 }
 
 export interface Customer {
@@ -825,104 +827,104 @@ export const INITIAL_CUSTOMERS: Customer[] = [
 ];
 
 export const INITIAL_ORDERS: Order[] = [
-  {
-    id: "ord-1",
-    orderNumber: "MP-20260612-001",
-    customerId: "cust-1",
-    customerName: "Nguyên Khang",
-    customerPhone: "0901234567",
-    customerAddress: "72 Lê Thánh Tôn, Phường Bến Nghé, Quận 1, TP. HCM",
-    items: [
-      {
-        mealId: "cg-cj",
-        mealName: "Ức gà cajun",
-        weight: "150g",
-        quantity: 5,
-        price: 36000,
-        cost: 24913
-      },
-      {
-        mealId: "tb-nv",
-        mealName: "Thăn bò ngũ vị",
-        weight: "200g",
-        quantity: 5,
-        price: 116000,
-        cost: 89481
-      }
-    ],
-    totalAmount: 760000, // 36k*5 + 116k*5 = 180k + 580k = 760k
-    totalCost: 571970, // 24.913*5 + 89.481*5 = 124.565 + 447.405 = 571.970
-    totalProfit: 188030,
-    deliveryFee: 30000,
-    paymentMethod: "Chuyển khoản",
-    paymentStatus: "Đã thanh toán",
-    status: "Đã giao",
-    deliveryDate: "2026-06-12",
-    createdAt: "2026-06-11T14:30:00Z",
-    notes: "Không hành tây, ăn nhạt."
-  },
-  {
-    id: "ord-2",
-    orderNumber: "MP-20260613-001",
-    customerId: "cust-3",
-    customerName: "Hoàng Minh",
-    customerPhone: "0982223344",
-    customerAddress: "450 Điện Biên Phủ, Phường 21, Quận Bình Thạnh, TP. HCM",
-    items: [
-      {
-        mealId: "combo-pf",
-        mealName: "Combo Power Fit v1",
-        weight: "Combo",
-        quantity: 1,
-        price: 536000,
-        cost: 423824
-      }
-    ],
-    totalAmount: 536000,
-    totalCost: 423824,
-    totalProfit: 112176,
-    deliveryFee: 25000,
-    paymentMethod: "COD",
-    paymentStatus: "Chưa thanh toán",
-    status: "Đang xử lý",
-    deliveryDate: "2026-06-13",
-    createdAt: "2026-06-12T09:15:00Z",
-    notes: "Giao giờ hành chính, gọi trước 15 phút."
-  },
-  {
-    id: "ord-3",
-    orderNumber: "MP-20260613-002",
-    customerId: "cust-2",
-    customerName: "Thùy Trang",
-    customerPhone: "0918765432",
-    customerAddress: "15 Thảo Điền, Phường Thảo Điền, Quận 2, TP. Thuận An",
-    items: [
-      {
-        mealId: "dg-ty",
-        mealName: "Đùi gà Teriyaki",
-        weight: "150g",
-        quantity: 4,
-        price: 49000,
-        cost: 31282
-      },
-      {
-        mealId: "ch-cj",
-        mealName: "Cá hồi cajun",
-        weight: "100g",
-        quantity: 3,
-        price: 63000,
-        cost: 43807
-      }
-    ],
-    totalAmount: 385000, // 49k*4 + 63k*3 = 196k + 189k = 385k
-    totalCost: 256549, // 31.282*4 + 43.807*3 = 125.128 + 131.421 = 256.549
-    totalProfit: 128451,
-    deliveryFee: 40000,
-    paymentMethod: "Chuyển khoản",
-    paymentStatus: "Đã thanh toán",
-    status: "Mới",
-    deliveryDate: "2026-06-14",
-    createdAt: "2026-06-13T07:10:00Z",
-    notes: "Giao trước 11h30 trưa."
-  }
+  // {
+  //   id: "ord-1",
+  //   orderNumber: "MP-20260612-001",
+  //   customerId: "cust-1",
+  //   customerName: "Nguyên Khang",
+  //   customerPhone: "0901234567",
+  //   customerAddress: "72 Lê Thánh Tôn, Phường Bến Nghé, Quận 1, TP. HCM",
+  //   items: [
+  //     {
+  //       mealId: "cg-cj",
+  //       mealName: "Ức gà cajun",
+  //       weight: "150g",
+  //       quantity: 5,
+  //       price: 36000,
+  //       cost: 24913
+  //     },
+  //     {
+  //       mealId: "tb-nv",
+  //       mealName: "Thăn bò ngũ vị",
+  //       weight: "200g",
+  //       quantity: 5,
+  //       price: 116000,
+  //       cost: 89481
+  //     }
+  //   ],
+  //   totalAmount: 760000, // 36k*5 + 116k*5 = 180k + 580k = 760k
+  //   totalCost: 571970, // 24.913*5 + 89.481*5 = 124.565 + 447.405 = 571.970
+  //   totalProfit: 188030,
+  //   deliveryFee: 30000,
+  //   paymentMethod: "Chuyển khoản",
+  //   paymentStatus: "Đã thanh toán",
+  //   status: "Đã giao",
+  //   deliveryDate: "2026-06-12",
+  //   createdAt: "2026-06-11T14:30:00Z",
+  //   notes: "Không hành tây, ăn nhạt."
+  // },
+  // {
+  //   id: "ord-2",
+  //   orderNumber: "MP-20260613-001",
+  //   customerId: "cust-3",
+  //   customerName: "Hoàng Minh",
+  //   customerPhone: "0982223344",
+  //   customerAddress: "450 Điện Biên Phủ, Phường 21, Quận Bình Thạnh, TP. HCM",
+  //   items: [
+  //     {
+  //       mealId: "combo-pf",
+  //       mealName: "Combo Power Fit v1",
+  //       weight: "Combo",
+  //       quantity: 1,
+  //       price: 536000,
+  //       cost: 423824
+  //     }
+  //   ],
+  //   totalAmount: 536000,
+  //   totalCost: 423824,
+  //   totalProfit: 112176,
+  //   deliveryFee: 25000,
+  //   paymentMethod: "COD",
+  //   paymentStatus: "Chưa thanh toán",
+  //   status: "Đang xử lý",
+  //   deliveryDate: "2026-06-13",
+  //   createdAt: "2026-06-12T09:15:00Z",
+  //   notes: "Giao giờ hành chính, gọi trước 15 phút."
+  // },
+  // {
+  //   id: "ord-3",
+  //   orderNumber: "MP-20260613-002",
+  //   customerId: "cust-2",
+  //   customerName: "Thùy Trang",
+  //   customerPhone: "0918765432",
+  //   customerAddress: "15 Thảo Điền, Phường Thảo Điền, Quận 2, TP. Thuận An",
+  //   items: [
+  //     {
+  //       mealId: "dg-ty",
+  //       mealName: "Đùi gà Teriyaki",
+  //       weight: "150g",
+  //       quantity: 4,
+  //       price: 49000,
+  //       cost: 31282
+  //     },
+  //     {
+  //       mealId: "ch-cj",
+  //       mealName: "Cá hồi cajun",
+  //       weight: "100g",
+  //       quantity: 3,
+  //       price: 63000,
+  //       cost: 43807
+  //     }
+  //   ],
+  //   totalAmount: 385000, // 49k*4 + 63k*3 = 196k + 189k = 385k
+  //   totalCost: 256549, // 31.282*4 + 43.807*3 = 125.128 + 131.421 = 256.549
+  //   totalProfit: 128451,
+  //   deliveryFee: 40000,
+  //   paymentMethod: "Chuyển khoản",
+  //   paymentStatus: "Đã thanh toán",
+  //   status: "Mới",
+  //   deliveryDate: "2026-06-14",
+  //   createdAt: "2026-06-13T07:10:00Z",
+  //   notes: "Giao trước 11h30 trưa."
+  // }
 ];
