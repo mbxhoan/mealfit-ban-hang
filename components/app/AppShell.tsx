@@ -10,6 +10,7 @@ import {
   Tag,
   Users,
   TrendingUp,
+  ClipboardList,
   Upload,
   LogOut,
   Menu,
@@ -35,6 +36,7 @@ const NAV: NavItem[] = [
   { href: '/products', label: 'Thực đơn & Combo', icon: <Tag className="h-4 w-4" /> },
   { href: '/customers', label: 'Khách hàng', icon: <Users className="h-4 w-4" /> },
   { href: '/reports', label: 'Báo cáo doanh thu', icon: <TrendingUp className="h-4 w-4" /> },
+  { href: '/statistics', label: 'Thống kê', icon: <ClipboardList className="h-4 w-4" /> },
   { href: '/import', label: 'Nhập dữ liệu', icon: <Upload className="h-4 w-4" />, adminOnly: true },
 ];
 
@@ -107,6 +109,7 @@ const TITLES: Record<string, string> = {
   '/products': 'Thực đơn & Bảng giá combo',
   '/customers': 'Hồ sơ khách hàng',
   '/reports': 'Báo cáo doanh thu & lợi nhuận',
+  '/statistics': 'Thống kê đi chợ & soạn đơn',
   '/import': 'Nhập dữ liệu từ Excel',
 };
 

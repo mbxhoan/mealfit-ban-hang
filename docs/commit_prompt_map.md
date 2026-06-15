@@ -4,6 +4,34 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-15 (c) — menu "Thống kê": tổng hợp đi chợ + tổng hợp đơn theo khách
+
+- **Prompt summary**: Thêm menu **Thống kê** gồm 2 tab. (1.a) *Tổng hợp đi chợ*: lọc đơn theo
+  khoảng ngày + trạng thái giao/thanh toán (mặc định "Chưa giao hàng"), bung combo thành món con,
+  gom theo **danh mục → món → trọng lượng**, tính số gói + tổng gam + **tổng kg theo danh mục**;
+  món thuộc combo giữ thành dòng riêng có nhãn "Combo" nhưng vẫn cộng vào tổng danh mục. (1.b)
+  *Tổng hợp đơn theo khách*: mỗi combo / cụm món lẻ của đơn là 1 cụm (STT, Tên khách, Tên order),
+  breakdown từng món thành dòng: Tên món · Số túi · Trọng lượng · Tổng cộng (túi×trọng lượng).
+- **Scope**: MealFit UI (new statistics screen) + combo composition data.
+- **Main files changed**: `src/data/comboComponents.ts` (AUTO-GEN từ sheet `Combo_chi_tiet`:
+  32 combo → 256 dòng món con), `src/components/StatisticsView.tsx` (logic bung combo + 2 bảng),
+  `app/(app)/statistics/page.tsx` (route), `components/app/AppShell.tsx` (nav "Thống kê" +
+  title + icon `ClipboardList`), `docs/commit_prompt_map.md`, `README.md`.
+- **Quyết định**:
+  - "Chưa giao hàng" = status ∈ {Mới, Đang xử lý, Đang giao} (enum app không có "Chưa giao hàng");
+    luôn loại "Đã hủy" khỏi mọi chế độ.
+  - Trục ngày = `deliveryDate` (ngày giao) vì mục tiêu là chuẩn bị hàng để giao.
+  - Cá tách theo danh mục thật của app (Cá hồi / Cá thu / Cá tầm / Cá bóp) thay vì gộp "Cá" như
+    sheet Excel — khớp ví dụ user ("tổng cá hồi 2.45kg").
+  - Combo bung qua bảng tra cứu tĩnh `COMBO_COMPONENTS` (khớp theo tên combo) vì `order_items`
+    lưu combo dạng 1 dòng (`weight="Combo"`), không có món con; seed cũng chưa đổ `mealfit_combo_products`.
+- **Tests run**: `npm run typecheck` (clean), `npm run build` (17 routes OK, `/statistics` 7.23 kB),
+  kiểm chứng số học bằng node trên seed orders (combo "Power Fit v1" → 8 món con, tổng đúng 2.50 kg).
+- **Commit message**: `feat(mealfit): thêm menu Thống kê (tổng hợp đi chợ + đơn theo khách)`
+- **Notes/Risks**: `comboComponents.ts` là snapshot từ workbook — regen nếu combo đổi. Nếu đơn dùng
+  tên combo không khớp `COMBO_COMPONENTS`, dòng combo giữ nguyên dưới danh mục "Combo" (không mất
+  dữ liệu) thay vì bung. Combo trong dữ liệu hiện đều SL món/combo = 1.
+
 ## 2026-06-15 (b) — nâng bảng đơn hàng (sort/cột/lọc/phân trang/bulk/sửa) + sidebar logo MealFit
 
 - **Prompt summary**: Nâng bảng Quản lý đơn hàng thành table chuẩn: sort + auto width, chọn cột (lưu
