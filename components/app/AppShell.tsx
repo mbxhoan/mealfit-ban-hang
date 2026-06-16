@@ -17,11 +17,15 @@ import {
   X,
   Plus,
   Settings2,
+  Copy,
+  ExternalLink,
+  Home,
 } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DataProvider } from '@/contexts/DataContext';
 import { ToastProvider } from '@/components/ui/Toast';
+import { useToast } from '@/components/ui/Toast';
 import { BackgroundAnimation } from '@/components/ui/BackgroundAnimation';
 import { logoutAction } from '@/app/login/actions';
 
@@ -170,6 +174,45 @@ function BottomNav() {
   );
 }
 
+function HeaderQuickLinks() {
+  const toast = useToast();
+
+  const copyHomePath = async () => {
+    try {
+      const homeUrl = `${window.location.origin}/`;
+      await navigator.clipboard.writeText(homeUrl);
+      toast.success(`Đã sao chép link trang chủ: ${homeUrl}`);
+    } catch {
+      toast.error('Không thể sao chép link trang chủ.');
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Link
+        href="/"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        aria-label="Mở trang chủ"
+      >
+        <Home className="h-3.5 w-3.5" />
+        Trang chủ
+        <ExternalLink className="h-3 w-3" />
+      </Link>
+      <button
+        type="button"
+        onClick={copyHomePath}
+        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        aria-label="Sao chép link trang chủ"
+      >
+        <Copy className="h-3.5 w-3.5" />
+        Copy link
+      </button>
+    </div>
+  );
+}
+
 export function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -216,9 +259,14 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                   </button>
                   <h1 className="truncate text-slate-800">{title}</h1>
                 </div>
-                <span className="hidden rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 sm:block">
-                  {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </span>
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:block">
+                    <HeaderQuickLinks />
+                  </div>
+                  <span className="hidden rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 sm:block">
+                    {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                </div>
               </header>
 
               <main className={`mf-scroll flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 ${hideBottomNav ? '' : 'pb-24 lg:pb-6'}`}>
