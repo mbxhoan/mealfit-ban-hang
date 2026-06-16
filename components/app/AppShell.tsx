@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Plus,
+  Settings2,
 } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ const NAV: NavItem[] = [
   { href: '/customers', label: 'Khách hàng', icon: <Users className="h-4 w-4" /> },
   { href: '/reports', label: 'Báo cáo doanh thu', icon: <TrendingUp className="h-4 w-4" /> },
   { href: '/statistics', label: 'Thống kê', icon: <ClipboardList className="h-4 w-4" /> },
+  { href: '/settings', label: 'Cài đặt', icon: <Settings2 className="h-4 w-4" />, adminOnly: true },
   { href: '/import', label: 'Nhập dữ liệu', icon: <Upload className="h-4 w-4" />, adminOnly: true },
 ];
 
@@ -111,6 +113,7 @@ const TITLES: Record<string, string> = {
   '/customers': 'Hồ sơ khách hàng',
   '/reports': 'Báo cáo doanh thu & lợi nhuận',
   '/statistics': 'Thống kê đi chợ & soạn đơn',
+  '/settings': 'Cài đặt ứng dụng & VietQR',
   '/import': 'Nhập dữ liệu từ Excel',
 };
 

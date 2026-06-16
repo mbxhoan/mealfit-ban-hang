@@ -17,12 +17,14 @@ seed, yêu cầu UI/UX, phân quyền và lộ trình. Cập nhật để phản
 3. **Chi tiết đơn**: món/combo + trọng lượng, số lượng, đơn giá, lợi nhuận.
 4. **Khách hàng & nhân viên**: liên hệ; phân quyền `admin`/`staff`.
 5. **Báo cáo doanh thu & lợi nhuận** theo thời gian/khách/món.
-6. **UI/UX chuyên nghiệp**, responsive 320–430 (mobile) / 768–1024 (tablet) / 1280–1920 (desktop),
+6. **Cài đặt**: liên hệ công khai + tài khoản nhận tiền mặc định để bill / đơn hàng tự dựng
+   VietQR và QR thanh toán.
+7. **UI/UX chuyên nghiệp**, responsive 320–430 (mobile) / 768–1024 (tablet) / 1280–1920 (desktop),
    không tràn ngang.
-7. **Loading**: màn hình chờ tải trang (`app/(app)/loading.tsx`), spinner nút khi submit.
-8. **Drawer + Toast + Validation**: drawer trượt phải (ESC/overlay đóng); toast góc phải tự ẩn 4s.
-9. **Import Excel**: tải template, hướng dẫn cột, bảng lỗi, chặn import tới khi sạch.
-10. **Landing công khai** (`/`) **view-only** (không đặt hàng): showcase món/combo, không cần login.
+8. **Loading**: màn hình chờ tải trang (`app/(app)/loading.tsx`), spinner nút khi submit.
+9. **Drawer + Toast + Validation**: drawer trượt phải (ESC/overlay đóng); toast góc phải tự ẩn 4s.
+10. **Import Excel**: tải template, hướng dẫn cột, bảng lỗi, chặn import tới khi sạch.
+11. **Landing công khai** (`/`) **view-only** (không đặt hàng): showcase món/combo, không cần login.
     Bấm danh mục → modal hiển thị các vị + **dinh dưỡng theo trọng lượng** (100/150/200g cố định +
     gram tùy ý có ràng buộc min–max, tính tuyến tính từ macro/100g của danh mục). **Nút nổi** góc dưới
     phải (Facebook + Zalo, animation rung) để liên hệ trực tiếp; link do admin cấu hình trong app.
@@ -42,7 +44,7 @@ Migration: `supabase/migrations/20260613160000_mealfit.sql` (core),
 | `mealfit_orders` | đơn: mã, khách, NV, ngày, tổng SL/tiền/vốn, giảm giá, ship, trạng thái |
 | `mealfit_order_items` | chi tiết: món/combo, SL, trọng lượng, giá vốn/bán, lợi nhuận |
 | `mealfit_categories` | danh mục: `name` (PK), `image_url`, macro/100g (`kcal/protein/carb/fat`) |
-| `mealfit_settings` | key/value cấu hình trang chủ (vd `facebook_url`, `zalo_url`) |
+| `mealfit_settings` | key/value cấu hình trang chủ + VietQR (vd `facebook_url`, `zalo_url`, `payment_bank_code`, `payment_account_number`, `payment_account_name`) |
 
 RLS bật, policy đọc cho `authenticated`; ghi qua service role (siết theo role ở migration sau).
 Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories` lưu ảnh + dinh dưỡng
@@ -69,7 +71,7 @@ Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories`
   giữ nguyên khối theo khách/order để tránh cắt dở giữa trang; ẩn sidebar/header/filter khi in.
 
 ## 5. Phân quyền & xác thực
-- **Admin**: toàn quyền + nhập dữ liệu (`/import`).
+- **Admin**: toàn quyền + nhập dữ liệu (`/import`) + chỉnh `/settings`.
 - **Nhân viên**: tạo đơn, xem món/combo, xem báo cáo; không nhập dữ liệu.
 - Auth qua cookie phiên (`lib/auth.ts`); xác thực vào `mealfit_employees`, fallback tài khoản seed
   (`admin/admin123`, `nhanvien/staff123`). Middleware (`middleware.ts`) chặn route nội bộ.
@@ -77,7 +79,7 @@ Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories`
 ## 6. Các bước triển khai
 1. Thiết kế dữ liệu + migration SQL. ✅
 2. Seed script đọc Excel → Supabase. ✅ (cần `SUPABASE_SERVICE_ROLE_KEY` để chạy)
-3. UI: `/`, `/login`, `/dashboard`, `/orders`, `/products`, `/customers`, `/reports`, `/import`. ✅
+3. UI: `/`, `/login`, `/dashboard`, `/orders`, `/products`, `/customers`, `/reports`, `/settings`, `/import`. ✅
 4. Form + Drawer + Toast + validation. ✅ (primitives sẵn; refactor form CRUD cũ sang drawer: follow-up)
 5. Phân quyền UI theo role. ✅ (nav + `/import` admin-only)
 6. Testing: `npm run typecheck` + `npm run build`. ✅
@@ -90,6 +92,7 @@ Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories`
 - ✅ Form CRUD món/khách/đơn dùng Drawer/Modal + Toast + ConfirmDialog + validation.
 - ✅ Đã seed: 129 products, 32 combos, 4 customers, 2 employees (admin+staff), 3 orders, 5 items.
 - ✅ Auth xác thực vào `mealfit_employees` (admin/admin123, nhanvien/staff123).
+- ✅ `/settings` quản lý liên hệ công khai + tài khoản nhận tiền mặc định; bill xuất VietQR theo cấu hình.
 
 ## Rủi ro / việc còn lại
 - Service-role qua API routes vì auth dùng cookie riêng (chưa map Supabase Auth); RLS ghi để service

@@ -4,6 +4,23 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-16 — tách Cài đặt + VietQR mặc định cho bill / đơn hàng
+
+- **Prompt summary**: Đưa liên hệ trang chủ sang menu riêng `Cài đặt`; thêm cấu hình tài khoản nhận
+  tiền mặc định để bill và đơn hàng tự dựng VietQR; bill xuất cho khách phải có layout giống mẫu
+  đính kèm; QR thanh toán cần hiển thị kiểu VietQR tương tự ảnh.
+- **Scope**: MealFit sidebar/navigation + settings screen + invoice/bill rendering + VietQR helper +
+  docs.
+- **Main files changed**: `components/app/AppShell.tsx`, `src/components/SettingsManagement.tsx`,
+  `app/(app)/settings/page.tsx`, `src/components/MealManagement.tsx`,
+  `src/components/order/{OrderBillView,invoice}.tsx`, `lib/vietqr.ts`,
+  `docs/mealfit_plan.md`, `docs/mealfit_prompt.md`.
+- **Tests run**: `npm run typecheck` (pending), `npm run build` (pending).
+- **Commit message**: `feat(mealfit): move contacts into settings and add default VietQR billing`
+- **Notes/Risks**: VietQR image uses the `img.vietqr.io` endpoint; if the browser cannot reach that
+  host, the bill preview will fall back to text only. Payment settings currently live in the shared
+  `mealfit_settings` key/value table.
+
 ## 2026-06-16 — change flavor list to grid layout
 
 - **Prompt summary**: Đổi giao diện hiển thị các vị của danh mục món từ dạng danh sách (list) sang dạng lưới (grid).

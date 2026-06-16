@@ -29,6 +29,9 @@ from the provided spreadsheet.
 - **Be transparent**: show the formula briefly when calculating.
 - **Printable prep views**: when returning the customer order summary, group lines by customer/order
   and keep the block intact for A4 printing; avoid splitting one customer's prep sheet across pages.
+- **Bills and payment**: when generating bill / confirmation messages, read the default payment
+  account from `mealfit_settings` and render VietQR / bank details consistently with the saved
+  configuration.
 
 ## Safety and Privacy
 - Never reveal confidential data: employee passwords, internal notes, raw Supabase keys.

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { MealItem, PricingOption } from "../data/mealPrepData";
-import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent, ImagePlus, X, Pencil, Facebook, MessageCircle } from "lucide-react";
+import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent, ImagePlus, X, Pencil } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import { CATEGORY_EMOJI, CATEGORY_NUTRITION_DEFAULTS } from "@/lib/menu";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
@@ -36,7 +36,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function MealManagement() {
-  const { meals, saveMeal, removeMeal, categories, saveCategory, settings, saveSettings } = useData();
+  const { meals, saveMeal, removeMeal, categories, saveCategory } = useData();
   const toast = useToast();
   const isAdmin = useIsAdmin();
 
@@ -59,10 +59,6 @@ export default function MealManagement() {
   const [catCarb, setCatCarb] = useState(0);
   const [catFat, setCatFat] = useState(0);
 
-  // Home-page contact links (Facebook / Zalo) editor.
-  const [fbUrl, setFbUrl] = useState("");
-  const [zaloUrl, setZaloUrl] = useState("");
-  const [contactSaving, setContactSaving] = useState(false);
   const catImageOf = (name: string) => categories.find((c) => c.name === name)?.imageUrl;
 
   // Form
@@ -103,12 +99,6 @@ export default function MealManagement() {
       return matchCat && matchSearch;
     });
   }, [meals, selectedCategory, searchTerm]);
-
-  // Keep the contact-link inputs in sync with loaded settings.
-  useEffect(() => {
-    setFbUrl(settings.facebook_url ?? "");
-    setZaloUrl(settings.zalo_url ?? "");
-  }, [settings]);
 
   // Load the selected category's shared photo + macros (admin value, else built-in default).
   useEffect(() => {
@@ -182,18 +172,6 @@ export default function MealManagement() {
     }
   };
 
-  const handleSaveContact = async () => {
-    setContactSaving(true);
-    try {
-      await saveSettings({ facebook_url: fbUrl.trim(), zalo_url: zaloUrl.trim() });
-      toast.success("Đã lưu liên hệ trang chủ.");
-    } catch {
-      toast.error("Lưu liên hệ thất bại. Vui lòng thử lại.");
-    } finally {
-      setContactSaving(false);
-    }
-  };
-
   const buildOption = (weight: string, price: number, cost: number): PricingOption => {
     const profit = price - cost;
     return { weight, price, cost, profit, margin: price > 0 ? Math.round((profit / price) * 100) : 0 };
@@ -262,40 +240,6 @@ export default function MealManagement() {
   return (
     <div className="space-y-6">
       <StatStrip stats={stats} />
-
-      {/* Home-page contact links (Facebook / Zalo) — drives the floating buttons on "/" */}
-      {isAdmin && (
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-brand-600" />
-            <h3 className="text-sm font-bold text-slate-800">Liên hệ trang chủ</h3>
-            <span className="text-[11px] text-slate-400">Hiện trên nút nổi Facebook / Zalo của trang công khai</span>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Link Facebook">
-              <input
-                className={inputClass}
-                placeholder="https://facebook.com/mealfitvn"
-                value={fbUrl}
-                onChange={(e) => setFbUrl(e.target.value)}
-              />
-            </Field>
-            <Field label="Link Zalo">
-              <input
-                className={inputClass}
-                placeholder="https://zalo.me/0901234567"
-                value={zaloUrl}
-                onChange={(e) => setZaloUrl(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="mt-3 flex justify-end">
-            <Button icon={<Save />} loading={contactSaving} onClick={handleSaveContact}>
-              Lưu liên hệ
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Filter + actions */}
       <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
