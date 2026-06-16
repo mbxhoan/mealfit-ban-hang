@@ -21,6 +21,19 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
   host, the bill preview will fall back to text only. Payment settings currently live in the shared
   `mealfit_settings` key/value table.
 
+## 2026-06-16 — seed mặc định settings liên hệ + VietQR
+
+- **Prompt summary**: Tạo migration dữ liệu sẵn Facebook fanpage, Zalo và tài khoản nhận tiền VIB
+  mặc định; bill phải tự dùng mã đơn hàng làm nội dung chuyển khoản.
+- **Scope**: MealFit settings seed + VietQR note helper.
+- **Main files changed**: `supabase/migrations/20260616173000_seed_default_settings.sql`,
+  `lib/vietqr.ts`, `src/components/order/invoice.ts`, `src/components/order/OrderBillView.tsx`,
+  `src/components/SettingsManagement.tsx`, `docs/mealfit_plan.md`, `docs/commit_prompt_map.md`.
+- **Tests run**: `npm run typecheck` (pending), `npm run build` (pending).
+- **Commit message**: `feat(mealfit): seed default settings and use order number in VietQR note`
+- **Notes/Risks**: Existing rows are updated via `on conflict (key) do update`; if the database
+  already has custom settings, this migration will overwrite them with the provided defaults.
+
 ## 2026-06-16 — change flavor list to grid layout
 
 - **Prompt summary**: Đổi giao diện hiển thị các vị của danh mục món từ dạng danh sách (list) sang dạng lưới (grid).

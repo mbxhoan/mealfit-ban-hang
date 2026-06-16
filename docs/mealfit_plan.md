@@ -49,6 +49,8 @@ Migration: `supabase/migrations/20260613160000_mealfit.sql` (core),
 RLS bật, policy đọc cho `authenticated`; ghi qua service role (siết theo role ở migration sau).
 Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories` lưu ảnh + dinh dưỡng
 **dùng chung** cho mọi món cùng nhóm (món chưa có ảnh riêng sẽ mượn ảnh danh mục).
+Database fresh install có seed mặc định cho `facebook_url`, `zalo_url` và tài khoản VietQR để bill
+ra QR ngay sau khi triển khai migration.
 
 ## 3. Quy trình seed
 1. File Excel gốc tại `docs/Meal Prep quản lý bán hàng final_sheet.xlsx` (đặt qua `MEALFIT_XLSX_PATH`).

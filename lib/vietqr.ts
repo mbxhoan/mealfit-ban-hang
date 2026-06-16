@@ -56,6 +56,6 @@ export function formatPaymentAccountLabel(account: VietQrAccount): string {
   return `${account.bankName} · ${account.accountNumber}`;
 }
 
-export function getPaymentNote(orderNumber: string, prefix = 'TT đơn'): string {
-  return `${prefix} ${orderNumber}`.trim();
+export function getPaymentNote(orderNumber: string): string {
+  return orderNumber.trim();
 }
