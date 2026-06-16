@@ -14,22 +14,18 @@ import {
   Scale,
   Calendar,
   Utensils,
+  Facebook,
+  MessageCircle,
 } from 'lucide-react';
 import { Reveal } from '@/components/home/Reveal';
 import { WordReveal } from '@/components/home/WordReveal';
-import { MobileStickyCTA } from '@/components/home/MobileStickyCTA';
 import { AmbientBackground } from '@/components/home/AmbientBackground';
 import { HeroVisual } from '@/components/home/HeroVisual';
 import { MealThumb } from '@/components/home/MealThumb';
-import {
-  CATEGORY_EMOJI,
-  categoryCards,
-  curatedCombos,
-  featuredDishes,
-  weightOptions,
-  minPrice,
-} from '@/lib/menu';
-import { getMeals } from '@/lib/mealfit-repo';
+import { MenuExplorer } from '@/components/home/MenuExplorer';
+import { FloatingContact } from '@/components/home/FloatingContact';
+import { curatedCombos, menuCategories, minPrice } from '@/lib/menu';
+import { getMeals, getCategories, getSettings } from '@/lib/mealfit-repo';
 import { INITIAL_MEAL_ITEMS } from '@/src/data/mealPrepData';
 import { formatVND } from '@/lib/format';
 
@@ -37,32 +33,36 @@ import { formatVND } from '@/lib/format';
 export const revalidate = 60;
 
 export default async function LandingPage() {
-  // Live meals (with photos) when Supabase is configured; otherwise the seed menu.
-  const live = await getMeals().catch(() => []);
+  // Live data (photos, category macros, contact links) when Supabase is configured; else the seed menu.
+  const [live, cats, settings] = await Promise.all([
+    getMeals().catch(() => []),
+    getCategories().catch(() => []),
+    getSettings().catch(() => ({}) as Record<string, string>),
+  ]);
   const meals = live.length ? live : INITIAL_MEAL_ITEMS;
 
-  const cats = categoryCards(meals);
-  const dishes = featuredDishes(meals);
+  const menuCats = menuCategories(meals, cats);
   const combos = curatedCombos(meals);
   const globalMin = Math.min(...meals.filter((m) => m.category !== 'Combo').map(minPrice));
+  const facebookUrl = settings.facebook_url || undefined;
+  const zaloUrl = settings.zalo_url || undefined;
 
   return (
     <main className="meal-home meal-grain relative min-h-screen">
       <AmbientBackground />
       <div className="relative z-[1]">
         <SiteNav />
-        <Hero globalMin={globalMin} catCount={cats.length} />
-        <CategorySection cats={cats} />
-        <FeaturedSection dishes={dishes} />
+        <Hero globalMin={globalMin} catCount={menuCats.length} />
+        <MenuExplorer categories={menuCats} zaloUrl={zaloUrl} />
         <ComboSection combos={combos} />
         <WhyChooseSection />
         <HowItWorksSection />
         <SuitableForSection />
         <FaqSection />
-        <FinalCtaSection globalMin={globalMin} />
+        <FinalCtaSection globalMin={globalMin} facebookUrl={facebookUrl} zaloUrl={zaloUrl} />
         <SiteFooter />
       </div>
-      <MobileStickyCTA fromPrice={formatVND(globalMin)} />
+      <FloatingContact facebookUrl={facebookUrl} zaloUrl={zaloUrl} />
     </main>
   );
 }
@@ -148,105 +148,6 @@ function Hero({ globalMin, catCount }: { globalMin: number; catCount: number }) 
   );
 }
 
-/* --------------------------------------------------------- Categories */
-function CategorySection({ cats }: { cats: ReturnType<typeof categoryCards> }) {
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-      <SectionHead
-        eyebrow="Nhóm món"
-        title="Chọn theo nguyên liệu bạn thích"
-        sub="Mỗi nhóm có nhiều món và mức trọng lượng khác nhau — dễ phối theo khẩu vị và mục tiêu."
-      />
-      <div className="mt-10 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
-        {cats.map((c, i) => (
-          <Reveal as="div" key={c.name} delay={i * 0.04}>
-            <a
-              href="#menu"
-              className="food-card group flex h-full items-center gap-3.5 rounded-2xl border border-meal-green/10 bg-meal-surface p-4 shadow-[0_18px_40px_-30px_rgba(71,56,36,0.5)]"
-            >
-              <span className="block h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-meal-cream">
-                <MealThumb
-                  code={c.code}
-                  name={c.name}
-                  emoji={c.emoji}
-                  serverImageUrl={c.imageUrl}
-                  imgClass="h-full w-full object-cover transition duration-300 group-hover:scale-110"
-                  emojiClass="flex h-full w-full items-center justify-center text-3xl transition duration-300 group-hover:scale-110"
-                />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate font-display text-base font-semibold text-meal-green-dark">
-                  {c.name}
-                </span>
-                <span className="mt-0.5 block text-xs font-semibold text-meal-muted">
-                  {c.count} món · từ {formatVND(c.from)}
-                </span>
-              </span>
-            </a>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------------------------------------- Featured */
-function FeaturedSection({ dishes }: { dishes: ReturnType<typeof featuredDishes> }) {
-  return (
-    <section id="menu" className="scroll-mt-20 bg-meal-cream/40 py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHead
-          eyebrow="Thực đơn nổi bật"
-          title="Món tươi, sẵn sàng để thưởng thức"
-          sub="Giá thực tế theo từng mức trọng lượng. Chọn phần vừa bụng, không lãng phí."
-        />
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {dishes.map((m, i) => (
-            <Reveal as="div" key={m.id} delay={(i % 5) * 0.05}>
-              <article className="food-card group flex h-full flex-col rounded-3xl border border-meal-green/10 bg-meal-surface p-4 text-center shadow-[0_18px_44px_-30px_rgba(71,56,36,0.5)]">
-                <span className="mx-auto block h-20 w-20 overflow-hidden rounded-full bg-gradient-to-br from-meal-cream to-white shadow-inner">
-                  <MealThumb
-                    code={m.code}
-                    name={m.name}
-                    emoji={CATEGORY_EMOJI[m.category] ?? '🍽️'}
-                    serverImageUrl={m.imageUrl}
-                    imgClass="h-full w-full object-cover transition duration-300 group-hover:scale-110"
-                    emojiClass="flex h-full w-full items-center justify-center text-5xl transition duration-300 group-hover:scale-110"
-                  />
-                </span>
-                <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-meal-green">
-                  {m.category}
-                </p>
-                <h3 className="mt-0.5 line-clamp-1 text-sm">{m.name}</h3>
-                <div className="mt-2 flex flex-wrap justify-center gap-1">
-                  {weightOptions(m).map((w) => (
-                    <span
-                      key={w}
-                      className="rounded-full bg-meal-green/8 px-2 py-0.5 text-[10px] font-bold text-meal-green-dark"
-                    >
-                      {w}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-auto pt-3">
-                  <p className="text-[11px] text-meal-muted">Chỉ từ</p>
-                  <p className="font-display text-lg font-semibold text-meal-tomato">{formatVND(minPrice(m))}</p>
-                  <a
-                    href="#order"
-                    className="mt-2 inline-flex w-full items-center justify-center gap-1 rounded-full bg-meal-green/10 py-2 text-xs font-bold text-meal-green-dark transition group-hover:bg-meal-green group-hover:text-white"
-                  >
-                    Đặt món <ArrowRight className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* -------------------------------------------------------------- Combo */
 function ComboSection({ combos }: { combos: ReturnType<typeof curatedCombos> }) {
   return (
@@ -276,14 +177,9 @@ function ComboSection({ combos }: { combos: ReturnType<typeof curatedCombos> }) 
                 </span>
                 <h3 className="mt-3 font-display text-xl">{c.name}</h3>
                 <p className="mt-1.5 flex-1 text-sm text-meal-muted">{c.goal}</p>
-                <div className="mt-5 flex items-end justify-between border-t border-meal-green/10 pt-4">
-                  <span>
-                    <span className="block text-[11px] text-meal-muted">Chỉ từ</span>
-                    <span className="font-display text-lg font-semibold text-meal-green-dark">{formatVND(c.from)}</span>
-                  </span>
-                  <a href="#order" className="btn-food btn-food-ghost px-4 py-2 text-xs">
-                    Chọn combo
-                  </a>
+                <div className="mt-5 border-t border-meal-green/10 pt-4">
+                  <span className="block text-[11px] text-meal-muted">Chỉ từ</span>
+                  <span className="font-display text-lg font-semibold text-meal-green-dark">{formatVND(c.from)}</span>
                 </div>
               </article>
             </Reveal>
@@ -430,16 +326,16 @@ function FaqSection() {
 }
 
 /* ----------------------------------------------------------- Final CTA */
-function FinalCtaSection({ globalMin }: { globalMin: number }) {
+function FinalCtaSection({ globalMin, facebookUrl, zaloUrl }: { globalMin: number; facebookUrl?: string; zaloUrl?: string }) {
   const bullets = ['Tươi mỗi ngày', 'Định lượng rõ ràng', 'Giao tận nơi'];
   return (
-    <section id="order" className="scroll-mt-20 px-4 py-16 sm:px-6">
+    <section id="contact" className="scroll-mt-20 px-4 py-16 sm:px-6">
       <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-meal-green to-meal-green-dark px-6 py-14 text-center text-white shadow-[0_50px_100px_-40px_rgba(47,95,52,0.7)] sm:px-12">
         <span className="pointer-events-none absolute -left-10 -top-10 text-8xl opacity-20 meal-float" style={{ ['--dur' as string]: '8s' }}>🥑</span>
         <span className="pointer-events-none absolute -bottom-8 -right-6 text-8xl opacity-20 meal-float" style={{ ['--dur' as string]: '9s' }}>🍅</span>
-        <h2 className="font-display !text-white">Sẵn sàng ăn ngon và gọn hơn mỗi ngày?</h2>
+        <h2 className="font-display !text-white">Muốn đặt món? Nhắn cho MealFit nhé!</h2>
         <p className="mx-auto mt-4 max-w-xl text-white/85">
-          Chọn món lẻ hoặc combo theo mục tiêu — chỉ từ {formatVND(globalMin)} mỗi phần. Bắt đầu với bữa đầu tiên hôm nay.
+          Xem thực đơn món lẻ và combo theo mục tiêu — chỉ từ {formatVND(globalMin)} mỗi phần. Liên hệ trực tiếp qua Facebook hoặc Zalo để được tư vấn và đặt món.
         </p>
         <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-semibold text-white/90">
           {bullets.map((b) => (
@@ -449,9 +345,16 @@ function FinalCtaSection({ globalMin }: { globalMin: number }) {
           ))}
         </ul>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="#menu" className="btn-food bg-white text-meal-green-dark hover:bg-meal-cream">
-            Xem thực đơn hôm nay <ArrowRight />
-          </a>
+          {zaloUrl && (
+            <a href={zaloUrl} target="_blank" rel="noopener noreferrer" className="btn-food bg-white text-meal-green-dark hover:bg-meal-cream">
+              <MessageCircle /> Liên hệ qua Zalo
+            </a>
+          )}
+          {facebookUrl && (
+            <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="btn-food bg-[#1877F2] text-white hover:bg-[#1466d6]">
+              <Facebook /> Nhắn qua Facebook
+            </a>
+          )}
           <Link href="/login" className="btn-food border border-white/40 bg-transparent text-white hover:bg-white/10">
             <LogIn /> Đăng nhập hệ thống
           </Link>

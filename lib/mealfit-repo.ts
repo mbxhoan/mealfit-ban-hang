@@ -1,6 +1,6 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
-import type { MealItem, Customer, Order, OrderDetail, PricingOption } from '@/src/data/mealPrepData';
+import type { MealItem, Customer, Order, OrderDetail, PricingOption, CategoryInfo } from '@/src/data/mealPrepData';
 
 const w = (s: string) => parseInt(s, 10) || 0;
 const slug = (s: string) =>
@@ -64,6 +64,27 @@ export async function getMeals(): Promise<MealItem[]> {
   return [...byKey.values(), ...comboItems];
 }
 
+export async function getCategories(): Promise<CategoryInfo[]> {
+  const db = createAdminClient();
+  if (!db) return [];
+  const { data } = await db.from('mealfit_categories').select('*').order('name');
+  return (data ?? []).map((c) => ({
+    name: c.name,
+    imageUrl: c.image_url ?? undefined,
+    kcal: c.kcal != null ? Number(c.kcal) : undefined,
+    protein: c.protein != null ? Number(c.protein) : undefined,
+    carb: c.carb != null ? Number(c.carb) : undefined,
+    fat: c.fat != null ? Number(c.fat) : undefined,
+  }));
+}
+
+export async function getSettings(): Promise<Record<string, string>> {
+  const db = createAdminClient();
+  if (!db) return {};
+  const { data } = await db.from('mealfit_settings').select('key,value');
+  return Object.fromEntries((data ?? []).map((r) => [r.key, r.value ?? '']));
+}
+
 export async function getCustomers(): Promise<Customer[]> {
   const db = createAdminClient();
   if (!db) return [];
@@ -125,15 +146,21 @@ export async function getOrders(): Promise<Order[]> {
   });
 }
 
-/** Bootstrap payload: meals, customers (with order aggregates), orders. */
+/** Bootstrap payload: meals, customers (with order aggregates), orders, categories, settings. */
 export async function getBootstrap() {
-  const [meals, customers, orders] = await Promise.all([getMeals(), getCustomers(), getOrders()]);
+  const [meals, customers, orders, categories, settings] = await Promise.all([
+    getMeals(),
+    getCustomers(),
+    getOrders(),
+    getCategories(),
+    getSettings(),
+  ]);
   for (const c of customers) {
     const theirs = orders.filter((o) => o.customerId === c.id);
     c.totalOrders = theirs.length;
     c.totalSpent = theirs.reduce((s, o) => s + o.totalAmount, 0);
   }
-  return { meals, customers, orders };
+  return { meals, customers, orders, categories, settings };
 }
 
 // ---------- WRITE ----------
@@ -179,6 +206,34 @@ export async function deleteMeal(meal: MealItem): Promise<void> {
   if (!db) return;
   if (meal.category === 'Combo') await db.from('mealfit_combos').delete().eq('code', meal.code);
   else await db.from('mealfit_products').delete().eq('name', meal.name);
+}
+
+export async function upsertCategory(c: CategoryInfo): Promise<void> {
+  const db = createAdminClient();
+  if (!db) return;
+  await db.from('mealfit_categories').upsert(
+    {
+      name: c.name,
+      image_url: c.imageUrl ?? null,
+      kcal: c.kcal ?? null,
+      protein: c.protein ?? null,
+      carb: c.carb ?? null,
+      fat: c.fat ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'name' },
+  );
+}
+
+export async function upsertSettings(obj: Record<string, string>): Promise<void> {
+  const db = createAdminClient();
+  if (!db) return;
+  const rows = Object.entries(obj).map(([key, value]) => ({
+    key,
+    value: value ?? null,
+    updated_at: new Date().toISOString(),
+  }));
+  if (rows.length) await db.from('mealfit_settings').upsert(rows, { onConflict: 'key' });
 }
 
 export async function upsertCustomer(c: Customer): Promise<void> {

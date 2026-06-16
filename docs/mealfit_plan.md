@@ -22,22 +22,31 @@ seed, yêu cầu UI/UX, phân quyền và lộ trình. Cập nhật để phản
 7. **Loading**: màn hình chờ tải trang (`app/(app)/loading.tsx`), spinner nút khi submit.
 8. **Drawer + Toast + Validation**: drawer trượt phải (ESC/overlay đóng); toast góc phải tự ẩn 4s.
 9. **Import Excel**: tải template, hướng dẫn cột, bảng lỗi, chặn import tới khi sạch.
-10. **Landing công khai** showcase món/combo, không cần login.
+10. **Landing công khai** (`/`) **view-only** (không đặt hàng): showcase món/combo, không cần login.
+    Bấm danh mục → modal hiển thị các vị + **dinh dưỡng theo trọng lượng** (100/150/200g cố định +
+    gram tùy ý có ràng buộc min–max, tính tuyến tính từ macro/100g của danh mục). **Nút nổi** góc dưới
+    phải (Facebook + Zalo, animation rung) để liên hệ trực tiếp; link do admin cấu hình trong app.
 
 ## 2. Mô hình dữ liệu (Supabase)
-Migration: `supabase/migrations/20260613160000_mealfit.sql`.
+Migration: `supabase/migrations/20260613160000_mealfit.sql` (core),
+`supabase/migrations/20260615120000_meal_images.sql` (ảnh món/combo),
+`supabase/migrations/20260616120000_categories_settings.sql` (ảnh+dinh dưỡng danh mục, settings).
 
 | Bảng | Mục đích |
 | --- | --- |
-| `mealfit_products` | món theo `code`, tên, nhóm, `weight`, giá vốn/bán, lợi nhuận, tỉ lệ lãi |
-| `mealfit_combos` | combo: mã, tên, mô tả, giá bán/vốn, lợi nhuận, tỉ lệ lãi |
+| `mealfit_products` | món theo `code`, tên, nhóm, `weight`, giá vốn/bán, lợi nhuận, tỉ lệ lãi, `image_url` |
+| `mealfit_combos` | combo: mã, tên, mô tả, giá bán/vốn, lợi nhuận, tỉ lệ lãi, `image_url` |
 | `mealfit_combo_products` | liên kết combo↔món con (`combo_id`, `product_id`, SL/trọng lượng) |
 | `mealfit_customers` | khách: mã, tên, SĐT, địa chỉ, ghi chú |
 | `mealfit_employees` | nhân viên: `role` ∈ {admin, staff}, tên, email, mật khẩu |
 | `mealfit_orders` | đơn: mã, khách, NV, ngày, tổng SL/tiền/vốn, giảm giá, ship, trạng thái |
 | `mealfit_order_items` | chi tiết: món/combo, SL, trọng lượng, giá vốn/bán, lợi nhuận |
+| `mealfit_categories` | danh mục: `name` (PK), `image_url`, macro/100g (`kcal/protein/carb/fat`) |
+| `mealfit_settings` | key/value cấu hình trang chủ (vd `facebook_url`, `zalo_url`) |
 
 RLS bật, policy đọc cho `authenticated`; ghi qua service role (siết theo role ở migration sau).
+Danh mục là chuỗi `category` trên `mealfit_products`; `mealfit_categories` lưu ảnh + dinh dưỡng
+**dùng chung** cho mọi món cùng nhóm (món chưa có ảnh riêng sẽ mượn ảnh danh mục).
 
 ## 3. Quy trình seed
 1. File Excel gốc tại `docs/Meal Prep quản lý bán hàng final_sheet.xlsx` (đặt qua `MEALFIT_XLSX_PATH`).

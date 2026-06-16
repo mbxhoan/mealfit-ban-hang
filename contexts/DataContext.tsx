@@ -8,6 +8,7 @@ import {
   type Order,
   type Customer,
   type MealItem,
+  type CategoryInfo,
 } from '@/src/data/mealPrepData';
 
 type Mode = 'loading' | 'supabase' | 'offline';
@@ -19,10 +20,14 @@ interface DataContextValue {
   setMeals: React.Dispatch<React.SetStateAction<MealItem[]>>;
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  categories: CategoryInfo[];
+  settings: Record<string, string>;
   mode: Mode;
   // Write-through CRUD (persists to Supabase in supabase mode, localStorage in offline mode).
   saveMeal: (m: MealItem) => Promise<void>;
   removeMeal: (m: MealItem) => Promise<void>;
+  saveCategory: (c: CategoryInfo) => Promise<void>;
+  saveSettings: (s: Record<string, string>) => Promise<void>;
   saveCustomer: (c: Customer) => Promise<void>;
   removeCustomer: (id: string) => Promise<void>;
   saveOrder: (o: Order) => Promise<void>;
@@ -41,6 +46,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [meals, setMeals] = useState<MealItem[]>(INITIAL_MEAL_ITEMS);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [categories, setCategories] = useState<CategoryInfo[]>([]);
+  const [settings, setSettings] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<Mode>('loading');
 
   // Load: try Supabase via API; fall back to localStorage seed (offline).
@@ -55,6 +62,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             setMeals(json.meals?.length ? json.meals : INITIAL_MEAL_ITEMS);
             setCustomers(json.customers ?? []);
             setOrders(json.orders ?? []);
+            setCategories(json.categories ?? []);
+            setSettings(json.settings ?? {});
             setMode('supabase');
             return;
           }
@@ -74,6 +83,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(m);
           if (Array.isArray(parsed) && parsed.length >= 50) setMeals(parsed);
         }
+        const cat = localStorage.getItem('mealfit_categories_v1');
+        if (cat) setCategories(JSON.parse(cat));
+        const set = localStorage.getItem('mealfit_settings_v1');
+        if (set) setSettings(JSON.parse(set));
       } catch {
         /* ignore */
       }
@@ -94,6 +107,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (mode === 'offline') localStorage.setItem('mealfit_customers_v2', JSON.stringify(customers));
   }, [customers, mode]);
+  useEffect(() => {
+    if (mode === 'offline') localStorage.setItem('mealfit_categories_v1', JSON.stringify(categories));
+  }, [categories, mode]);
+  useEffect(() => {
+    if (mode === 'offline') localStorage.setItem('mealfit_settings_v1', JSON.stringify(settings));
+  }, [settings, mode]);
 
   const post = (path: string, body: unknown) =>
     fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -110,6 +129,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const removeMeal = async (m: MealItem) => {
     setMeals((prev) => prev.filter((x) => x.id !== m.id));
     if (mode === 'supabase') await del('/api/mealfit/meals', m);
+  };
+  const saveCategory = async (c: CategoryInfo) => {
+    setCategories((prev) => {
+      const i = prev.findIndex((x) => x.name === c.name);
+      return i >= 0 ? prev.map((x) => (x.name === c.name ? c : x)) : [...prev, c];
+    });
+    if (mode === 'supabase') await post('/api/mealfit/categories', c);
+  };
+  const saveSettings = async (s: Record<string, string>) => {
+    setSettings((prev) => ({ ...prev, ...s }));
+    if (mode === 'supabase') await post('/api/mealfit/settings', s);
   };
   const saveCustomer = async (c: Customer) => {
     setCustomers((prev) => {
@@ -143,9 +173,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setMeals,
         customers,
         setCustomers,
+        categories,
+        settings,
         mode,
         saveMeal,
         removeMeal,
+        saveCategory,
+        saveSettings,
         saveCustomer,
         removeCustomer,
         saveOrder,

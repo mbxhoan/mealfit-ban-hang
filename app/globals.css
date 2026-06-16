@@ -187,6 +187,17 @@ html, body { max-width: 100%; overflow-x: hidden; }
   border-radius: 12px;
 }
 
+/* Attention wiggle for the floating contact buttons (Facebook / Zalo) */
+@keyframes mf-shake {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  90% { transform: rotate(-12deg); }
+  92% { transform: rotate(10deg); }
+  94% { transform: rotate(-8deg); }
+  96% { transform: rotate(6deg); }
+  98% { transform: rotate(-3deg); }
+}
+.mf-shake { animation: mf-shake 3s ease-in-out infinite; }
+
 /* Gentle ingredient float (motion-safe, transform/opacity only) */
 @keyframes meal-float {
   0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
@@ -251,6 +262,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .meal-float,
   .meal-dots,
+  .mf-shake,
   .meal-orb { animation: none !important; }
   .btn-food:hover,
   .food-card:hover { transform: none; }

@@ -4,6 +4,37 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-16 — ảnh danh mục + dinh dưỡng theo trọng lượng + trang chủ view-only + nút nổi FB/Zalo
+
+- **Prompt summary**: (1) Cho admin upload ảnh theo **danh mục** (ức gà, thăn bò…). (2) Món/vị chưa
+  có ảnh riêng thì **dùng ảnh danh mục** (rồi tới emoji). (3) Trang chủ `/` thành **view-only** (bỏ
+  đặt hàng), thêm **nút nổi góc dưới phải** Facebook + Zalo có animation rung thu hút. (4) Hiển thị
+  món **theo danh mục**: bấm danh mục → ra các vị + **dinh dưỡng theo trọng lượng** (cố định
+  100/150/200g + ô nhập gram tùy ý có ràng buộc min–max, tính tuyến tính).
+- **Scope**: MealFit schema (2 bảng mới) + repo/API + DataContext + admin UI (form sửa món) +
+  landing page (view-only + explorer + floating contact).
+- **Quyết định (hỏi user)**: dinh dưỡng **admin tự nhập, có default** chuẩn/100g; link liên hệ
+  **admin sửa trong app** (bảng `mealfit_settings`); ảnh+macro danh mục **gộp vào form sửa món**.
+- **Main files changed**:
+  - DB: `supabase/migrations/20260616120000_categories_settings.sql` (`mealfit_categories`,
+    `mealfit_settings` + RLS read).
+  - Backend: `lib/mealfit-repo.ts` (`getCategories/upsertCategory`, `getSettings/upsertSettings`,
+    bootstrap), `app/api/mealfit/{categories,settings}/route.ts` (admin POST),
+    `src/data/mealPrepData.ts` (`CategoryInfo`), `lib/menu.ts` (`CATEGORY_NUTRITION_DEFAULTS`,
+    `WEIGHT_MIN/MAX/PRESETS`, `nutritionFor`, `categoryNutrition/Image`, `menuCategories`),
+    `contexts/DataContext.tsx` (categories+settings state + write-through).
+  - UI: `components/home/MealThumb.tsx` (fallback ảnh danh mục), `components/home/MenuExplorer.tsx`
+    (mới — grid danh mục + featured + modal vị/dinh dưỡng), `components/home/FloatingContact.tsx`
+    (mới — nút nổi FB/Zalo `mf-shake`), `app/page.tsx` (view-only, bỏ CTA đặt hàng, CTA cuối →
+    liên hệ), `app/globals.css` (`@keyframes mf-shake`), `src/components/MealManagement.tsx`
+    (form: ảnh+macro danh mục; card: liên hệ trang chủ).
+  - Bỏ dùng `components/home/MobileStickyCTA.tsx`.
+- **Tests run**: `npm run typecheck` (clean), `npm run build` (19 routes OK, `/` 107 kB, 2 API mới).
+- **Commit message**: `feat(mealfit): category photos + nutrition explorer + view-only home with floating contact`
+- **Notes/Risks**: Macro/100g là default ước tính (admin chỉnh được). Offline (thiếu Supabase env):
+  dinh dưỡng dùng default, link liên hệ trống → nút nổi ẩn, ảnh danh mục chỉ từ localStorage. Cần
+  `supabase db push` để tạo 2 bảng mới; app vẫn chạy nếu chưa push.
+
 ## 2026-06-15 (d) — in A4 cho "Tổng hợp đơn theo khách" với page break theo khối khách
 
 - **Prompt summary**: Làm bản in A4 cho tab **Tổng hợp đơn theo khách**. Nhóm dữ liệu theo khách

@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 /**
  * Renders a meal/combo photo when available, else a category emoji.
  * Image source resolution order:
- *   1. serverImageUrl  — from Supabase live data (rendered on the server)
- *   2. offline cache   — image saved in admin while running offline (localStorage)
- *   3. emoji fallback
+ *   1. serverImageUrl    — the dish's own photo (Supabase live data, rendered on the server)
+ *   2. categoryImageUrl  — the dish's category photo (shared fallback)
+ *   3. offline cache     — image saved in admin while running offline (localStorage)
+ *   4. emoji fallback
  * Reading offline data in an effect (not during render) keeps SSR/CSR markup
  * identical, so there is no hydration mismatch.
  */
@@ -34,6 +35,7 @@ export function MealThumb({
   emoji,
   name,
   serverImageUrl,
+  categoryImageUrl,
   imgClass,
   emojiClass,
 }: {
@@ -41,6 +43,7 @@ export function MealThumb({
   emoji: string;
   name: string;
   serverImageUrl?: string;
+  categoryImageUrl?: string;
   imgClass: string;
   emojiClass: string;
 }) {
@@ -48,9 +51,9 @@ export function MealThumb({
 
   useEffect(() => {
     if (src) return;
-    const url = offlineImages()[code];
+    const url = offlineImages()[code] ?? categoryImageUrl;
     if (url) setSrc(url);
-  }, [code, src]);
+  }, [code, src, categoryImageUrl]);
 
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element

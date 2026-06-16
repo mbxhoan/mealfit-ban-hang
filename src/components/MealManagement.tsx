@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { MealItem, PricingOption } from "../data/mealPrepData";
-import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent, ImagePlus, X, Pencil } from "lucide-react";
+import { Search, Plus, Trash2, TrendingUp, Save, Tag, Package, Layers, Percent, ImagePlus, X, Pencil, Facebook, MessageCircle } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
-import { CATEGORY_EMOJI } from "@/lib/menu";
+import { CATEGORY_EMOJI, CATEGORY_NUTRITION_DEFAULTS } from "@/lib/menu";
 import { StatStrip, type Stat } from "@/components/ui/StatStrip";
 import { useToast } from "@/components/ui/Toast";
 import { useIsAdmin } from "@/contexts/AuthContext";
@@ -36,7 +36,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function MealManagement() {
-  const { meals, saveMeal, removeMeal } = useData();
+  const { meals, saveMeal, removeMeal, categories, saveCategory, settings, saveSettings } = useData();
   const toast = useToast();
   const isAdmin = useIsAdmin();
 
@@ -49,6 +49,21 @@ export default function MealManagement() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [imgBusy, setImgBusy] = useState(false);
+
+  // Per-category photo + macros (per 100g), shared by every dish in the category.
+  const catFileRef = useRef<HTMLInputElement>(null);
+  const [catImageUrl, setCatImageUrl] = useState("");
+  const [catImgBusy, setCatImgBusy] = useState(false);
+  const [catKcal, setCatKcal] = useState(0);
+  const [catProtein, setCatProtein] = useState(0);
+  const [catCarb, setCatCarb] = useState(0);
+  const [catFat, setCatFat] = useState(0);
+
+  // Home-page contact links (Facebook / Zalo) editor.
+  const [fbUrl, setFbUrl] = useState("");
+  const [zaloUrl, setZaloUrl] = useState("");
+  const [contactSaving, setContactSaving] = useState(false);
+  const catImageOf = (name: string) => categories.find((c) => c.name === name)?.imageUrl;
 
   // Form
   const [name, setName] = useState("");
@@ -64,7 +79,7 @@ export default function MealManagement() {
   const formatVND = (num: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
 
-  const categories = useMemo(() => ["Tất cả", ...Array.from(new Set(meals.map((m) => m.category)))], [meals]);
+  const categoryTabs = useMemo(() => ["Tất cả", ...Array.from(new Set(meals.map((m) => m.category)))], [meals]);
 
   const stats: Stat[] = useMemo(() => {
     const combos = meals.filter((m) => m.category === "Combo").length;
@@ -73,11 +88,11 @@ export default function MealManagement() {
     const avgMargin = allMargins.length ? Math.round(allMargins.reduce((s, x) => s + x, 0) / allMargins.length) : 0;
     return [
       { label: "Tổng món/combo", value: meals.length, icon: <Tag className="h-5 w-5" />, accent: "bg-brand-50 text-brand-600" },
-      { label: "Món lẻ", value: dishes, sub: `${categories.length - 1} nhóm`, icon: <Package className="h-5 w-5" />, accent: "bg-indigo-50 text-indigo-600" },
+      { label: "Món lẻ", value: dishes, sub: `${categoryTabs.length - 1} nhóm`, icon: <Package className="h-5 w-5" />, accent: "bg-indigo-50 text-indigo-600" },
       { label: "Combo", value: combos, icon: <Layers className="h-5 w-5" />, accent: "bg-amber-50 text-amber-600" },
       { label: "Lợi nhuận TB", value: `${avgMargin}%`, icon: <Percent className="h-5 w-5" />, accent: "bg-emerald-50 text-emerald-600" },
     ];
-  }, [meals, categories]);
+  }, [meals, categoryTabs]);
 
   const filteredMeals = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -88,6 +103,25 @@ export default function MealManagement() {
       return matchCat && matchSearch;
     });
   }, [meals, selectedCategory, searchTerm]);
+
+  // Keep the contact-link inputs in sync with loaded settings.
+  useEffect(() => {
+    setFbUrl(settings.facebook_url ?? "");
+    setZaloUrl(settings.zalo_url ?? "");
+  }, [settings]);
+
+  // Load the selected category's shared photo + macros (admin value, else built-in default).
+  useEffect(() => {
+    if (!drawerOpen || isCombo) return;
+    const name = category === "OTHER" ? customCategory.trim() : category;
+    const existing = categories.find((c) => c.name === name);
+    const def = CATEGORY_NUTRITION_DEFAULTS[name];
+    setCatImageUrl(existing?.imageUrl ?? "");
+    setCatKcal(existing?.kcal ?? def?.kcal ?? 0);
+    setCatProtein(existing?.protein ?? def?.protein ?? 0);
+    setCatCarb(existing?.carb ?? def?.carb ?? 0);
+    setCatFat(existing?.fat ?? def?.fat ?? 0);
+  }, [drawerOpen, isCombo, category, customCategory, categories]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -134,6 +168,32 @@ export default function MealManagement() {
     }
   };
 
+  const pickCatImage = async (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Vui lòng chọn tệp ảnh.");
+    setCatImgBusy(true);
+    try {
+      setCatImageUrl(await fileToDataUrl(file));
+    } catch {
+      toast.error("Không đọc được ảnh. Thử ảnh khác.");
+    } finally {
+      setCatImgBusy(false);
+      if (catFileRef.current) catFileRef.current.value = "";
+    }
+  };
+
+  const handleSaveContact = async () => {
+    setContactSaving(true);
+    try {
+      await saveSettings({ facebook_url: fbUrl.trim(), zalo_url: zaloUrl.trim() });
+      toast.success("Đã lưu liên hệ trang chủ.");
+    } catch {
+      toast.error("Lưu liên hệ thất bại. Vui lòng thử lại.");
+    } finally {
+      setContactSaving(false);
+    }
+  };
+
   const buildOption = (weight: string, price: number, cost: number): PricingOption => {
     const profit = price - cost;
     return { weight, price, cost, profit, margin: price > 0 ? Math.round((profit / price) * 100) : 0 };
@@ -167,6 +227,17 @@ export default function MealManagement() {
     };
     try {
       await saveMeal(item);
+      // Persist the shared category photo + macros (dishes without their own photo use this).
+      if (!isCombo) {
+        await saveCategory({
+          name: finalCategory,
+          imageUrl: catImageUrl || undefined,
+          kcal: catKcal || undefined,
+          protein: catProtein || undefined,
+          carb: catCarb || undefined,
+          fat: catFat || undefined,
+        });
+      }
       toast.success(editingId ? `Đã cập nhật "${item.name}".` : `Đã thêm món "${item.name}".`);
       setDrawerOpen(false);
     } catch {
@@ -192,6 +263,40 @@ export default function MealManagement() {
     <div className="space-y-6">
       <StatStrip stats={stats} />
 
+      {/* Home-page contact links (Facebook / Zalo) — drives the floating buttons on "/" */}
+      {isAdmin && (
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-brand-600" />
+            <h3 className="text-sm font-bold text-slate-800">Liên hệ trang chủ</h3>
+            <span className="text-[11px] text-slate-400">Hiện trên nút nổi Facebook / Zalo của trang công khai</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Link Facebook">
+              <input
+                className={inputClass}
+                placeholder="https://facebook.com/mealfitvn"
+                value={fbUrl}
+                onChange={(e) => setFbUrl(e.target.value)}
+              />
+            </Field>
+            <Field label="Link Zalo">
+              <input
+                className={inputClass}
+                placeholder="https://zalo.me/0901234567"
+                value={zaloUrl}
+                onChange={(e) => setZaloUrl(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button icon={<Save />} loading={contactSaving} onClick={handleSaveContact}>
+              Lưu liên hệ
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Filter + actions */}
       <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
         <div className="relative w-full sm:w-80">
@@ -206,7 +311,7 @@ export default function MealManagement() {
         </div>
         <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
           <div className="flex flex-wrap gap-1">
-            {categories.map((cat) => (
+            {categoryTabs.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -234,9 +339,9 @@ export default function MealManagement() {
           <div key={meal.id} className="flex flex-col justify-between overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-shadow hover:shadow-md">
             {/* Media strip: photo if set, else category emoji */}
             <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-50 to-slate-50">
-              {meal.imageUrl ? (
+              {meal.imageUrl || catImageOf(meal.category) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={meal.imageUrl} alt={meal.name} className="h-full w-full object-cover" />
+                <img src={meal.imageUrl || catImageOf(meal.category)} alt={meal.name} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-5xl opacity-80">{CATEGORY_EMOJI[meal.category] ?? "🍽️"}</span>
               )}
@@ -389,6 +494,66 @@ export default function MealManagement() {
                   <input className={inputClass} placeholder="Salad / Nước ép…" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
                 </Field>
               )}
+
+              {/* Shared category photo + macros — applied to every dish in this category */}
+              <div className="space-y-4 rounded-xl border border-brand-100 bg-brand-50/40 p-4">
+                <p className="text-xs font-bold text-brand-700">
+                  Danh mục: {category === "OTHER" ? customCategory.trim() || "(nhóm mới)" : category}
+                  <span className="ml-1 font-medium text-slate-400">— dùng chung cho mọi món cùng nhóm</span>
+                </p>
+                <Field label="Ảnh danh mục (món chưa có ảnh riêng sẽ dùng ảnh này)">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      {catImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={catImageUrl} alt="Ảnh danh mục" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-3xl opacity-70">{CATEGORY_EMOJI[category] ?? "🍽️"}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        ref={catFileRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => pickCatImage(e.target.files?.[0])}
+                      />
+                      <Button variant="secondary" icon={<ImagePlus />} loading={catImgBusy} onClick={() => catFileRef.current?.click()}>
+                        {catImageUrl ? "Đổi ảnh danh mục" : "Tải ảnh danh mục"}
+                      </Button>
+                      {catImageUrl && (
+                        <button type="button" onClick={() => setCatImageUrl("")} className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-500 hover:underline">
+                          <X className="h-3.5 w-3.5" /> Gỡ ảnh danh mục
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </Field>
+                <div>
+                  <p className="mb-2 text-[11px] font-bold text-slate-500">Dinh dưỡng / 100g (hiển thị trên trang chủ)</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {([
+                      ["Calo (kcal)", catKcal, setCatKcal],
+                      ["Đạm (g)", catProtein, setCatProtein],
+                      ["Carb (g)", catCarb, setCatCarb],
+                      ["Béo (g)", catFat, setCatFat],
+                    ] as const).map(([label, val, setVal]) => (
+                      <div key={label}>
+                        <span className="block text-[9px] text-slate-400">{label}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          value={val}
+                          onChange={(e) => setVal(Number(e.target.value))}
+                          className="w-full rounded-md border border-slate-200 p-1 text-center text-xs font-bold"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               <p className="text-xs font-bold text-slate-700">Cấu hình các mức trọng lượng:</p>
               {([

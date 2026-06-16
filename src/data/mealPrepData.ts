@@ -16,6 +16,17 @@ export interface MealItem {
   imageUrl?: string;
 }
 
+/** Shared per-category display data: a photo (used when a dish has none) + nutrition per 100g. */
+export interface CategoryInfo {
+  name: string;
+  imageUrl?: string;
+  /** Macros per 100g (cooked). Scaled linearly by weight on the public menu. */
+  kcal?: number;
+  protein?: number;
+  carb?: number;
+  fat?: number;
+}
+
 export interface Customer {
   id: string;
   name: string;
