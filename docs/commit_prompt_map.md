@@ -4,6 +4,15 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-16 — tích hợp video giới thiệu quy trình chế biến tại trang chủ
+
+- **Prompt summary**: Setup video `public/video.mp4` lên trang chủ `/` stream tự nhiên, auto play khi scroll tới, không viền, thiết kế giao diện chiếu video thẩm mỹ, chuyên nghiệp, sinh động, tự nhiên, thu hút khách hàng, hạn chế text.
+- **Scope**: MealFit public landing page component + video stream logic + layout integration.
+- **Main files changed**: `components/home/KitchenVideo.tsx`, `app/page.tsx`.
+- **Tests run**: `npm run typecheck`, `npm run build`.
+- **Commit message**: `feat(mealfit): add kitchen video showcase with scroll autoplay on landing page`
+- **Notes/Risks**: Video requires browsers to allow autoplay (which must be muted by default). Custom unmute/mute button is provided for visual accessibility.
+
 ## 2026-06-16 — tách Cài đặt + VietQR mặc định cho bill / đơn hàng
 
 - **Prompt summary**: Đưa liên hệ trang chủ sang menu riêng `Cài đặt`; thêm cấu hình tài khoản nhận

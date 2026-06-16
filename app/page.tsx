@@ -23,6 +23,7 @@ import { AmbientBackground } from '@/components/home/AmbientBackground';
 import { HeroVisual } from '@/components/home/HeroVisual';
 import { MealThumb } from '@/components/home/MealThumb';
 import { MenuExplorer } from '@/components/home/MenuExplorer';
+import { KitchenVideo } from '@/components/home/KitchenVideo';
 import { FloatingContact } from '@/components/home/FloatingContact';
 import { curatedCombos, menuCategories, minPrice } from '@/lib/menu';
 import { getMeals, getCategories, getSettings } from '@/lib/mealfit-repo';
@@ -53,6 +54,7 @@ export default async function LandingPage() {
       <div className="relative z-[1]">
         <SiteNav />
         <Hero globalMin={globalMin} catCount={menuCats.length} />
+        <KitchenVideo />
         <MenuExplorer categories={menuCats} zaloUrl={zaloUrl} />
         <ComboSection combos={combos} />
         <WhyChooseSection />
