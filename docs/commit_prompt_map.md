@@ -4,6 +4,15 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-16 — change flavor list to grid layout
+
+- **Prompt summary**: Đổi giao diện hiển thị các vị của danh mục món từ dạng danh sách (list) sang dạng lưới (grid).
+- **Scope**: MealFit landing page / MenuExplorer component.
+- **Main files changed**: `components/home/MenuExplorer.tsx`.
+- **Tests run**: `npm run typecheck`, `npm run build` (successful).
+- **Commit message**: `style(mealfit): change flavors list to grid layout in MenuExplorer`
+- **Notes/Risks**: None. CSS change only.
+
 ## 2026-06-16 — ảnh danh mục + dinh dưỡng theo trọng lượng + trang chủ view-only + nút nổi FB/Zalo
 
 - **Prompt summary**: (1) Cho admin upload ảnh theo **danh mục** (ức gà, thăn bò…). (2) Món/vị chưa

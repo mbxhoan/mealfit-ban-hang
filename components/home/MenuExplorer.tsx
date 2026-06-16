@@ -202,9 +202,9 @@ function CategoryModal({ category, zaloUrl, onClose }: { category: MenuCategory;
         {/* Flavors */}
         <div className="mt-6">
           <p className="text-xs font-bold uppercase tracking-wide text-meal-green">Các vị</p>
-          <div className="mt-3 space-y-2.5">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {category.flavors.map((f) => (
-              <div key={f.id} className="flex flex-col gap-2 rounded-2xl border border-meal-green/10 bg-meal-surface p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div key={f.id} className="flex flex-col gap-2 rounded-2xl border border-meal-green/10 bg-meal-surface p-3.5">
                 <span className="font-display text-base font-semibold text-meal-green-dark">{f.name}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {f.options.map((o) => (
