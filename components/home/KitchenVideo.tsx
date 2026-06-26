@@ -60,7 +60,7 @@ export function KitchenVideo() {
   };
 
   return (
-    <section className="relative mx-auto my-16 max-w-5xl px-4 sm:px-6">
+    <section id="video" className="relative mx-auto my-16 max-w-5xl scroll-mt-20 px-4 sm:px-6">
       {/* Ambient background glow behind the video container */}
       <div 
         className="absolute -inset-4 -z-10 rounded-[3rem] bg-gradient-to-r from-meal-green/15 via-meal-orange/10 to-meal-yellow/15 opacity-70 blur-2xl animate-pulse" 

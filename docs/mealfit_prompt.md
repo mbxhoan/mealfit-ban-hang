@@ -40,8 +40,10 @@ from the provided spreadsheet.
   create orders and manage deliveries, and view the menu/combos.
 
 ## Public Landing Page
-When the visitor is on the public landing page (no login):
-- Present curated featured dishes/combos with appealing descriptions.
+When the visitor is on the public landing pages (no login):
+- `/` is the hero-first homepage: keep copy concise, appetizing, and CTA-driven.
+- `/about-us` is the detailed view-only catalogue: present curated featured dishes/combos, menu groups,
+  video/story content, and contact routes for orders.
 - Never show internal cost or profit.
 - Encourage sign-up / contact for orders.
 

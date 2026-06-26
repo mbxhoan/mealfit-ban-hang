@@ -24,10 +24,12 @@ seed, yêu cầu UI/UX, phân quyền và lộ trình. Cập nhật để phản
 8. **Loading**: màn hình chờ tải trang (`app/(app)/loading.tsx`), spinner nút khi submit.
 9. **Drawer + Toast + Validation**: drawer trượt phải (ESC/overlay đóng); toast góc phải tự ẩn 4s.
 10. **Import Excel**: tải template, hướng dẫn cột, bảng lỗi, chặn import tới khi sạch.
-11. **Landing công khai** (`/`) **view-only** (không đặt hàng): showcase món/combo, không cần login.
-    Bấm danh mục → modal hiển thị các vị + **dinh dưỡng theo trọng lượng** (100/150/200g cố định +
-    gram tùy ý có ràng buộc min–max, tính tuyến tính từ macro/100g của danh mục). **Nút nổi** góc dưới
-    phải (Facebook + Zalo, animation rung) để liên hệ trực tiếp; link do admin cấu hình trong app.
+11. **Landing công khai**: `/` là **hero homepage** bám branding MealFit (product-first, CTA dẫn sang
+    menu/liên hệ), còn `/about-us` giữ vai trò **landing chi tiết view-only** (không checkout trực tiếp):
+    showcase món/combo, video, FAQ và menu theo danh mục. Bấm danh mục → modal hiển thị các vị +
+    **dinh dưỡng theo trọng lượng** (100/150/200g cố định + gram tùy ý có ràng buộc min–max, tính
+    tuyến tính từ macro/100g của danh mục). **Nút nổi** góc dưới phải (Facebook + Zalo, animation rung)
+    để liên hệ trực tiếp; link do admin cấu hình trong app.
 
 ## 2. Mô hình dữ liệu (Supabase)
 Migration: `supabase/migrations/20260613160000_mealfit.sql` (core),
@@ -95,6 +97,8 @@ ra QR ngay sau khi triển khai migration.
 - ✅ Đã seed: 129 products, 32 combos, 4 customers, 2 employees (admin+staff), 3 orders, 5 items.
 - ✅ Auth xác thực vào `mealfit_employees` (admin/admin123, nhanvien/staff123).
 - ✅ `/settings` quản lý liên hệ công khai + tài khoản nhận tiền mặc định; bill xuất VietQR theo cấu hình.
+- ✅ `/` đã refactor thành hero landing mới theo mockup; landing catalogue cũ được chuyển sang
+  `/about-us` để giữ menu/video/FAQ mà không làm loãng hero chính.
 
 ## Rủi ro / việc còn lại
 - Service-role qua API routes vì auth dùng cookie riêng (chưa map Supabase Auth); RLS ghi để service

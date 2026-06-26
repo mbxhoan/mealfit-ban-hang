@@ -4,6 +4,58 @@ Ghi lại mỗi commit MealFit: tóm tắt prompt, scope, file chính, lệnh te
 
 ---
 
+## 2026-06-17 — kéo hero protein lên trên và vào giữa theo mockup
+
+- **Prompt summary**: Chỉnh lại hero homepage để cá hồi không tụt xuống dưới mất một khúc; kéo cụm
+  3 món lên trên và vào giữa hơn, bám gần `docs/gpts/mockups/home-page.png`.
+- **Scope**: MealFit homepage hero visual alignment refinement.
+- **Main files changed**: `components/home/HomeHeroScene.tsx`, `docs/commit_prompt_map.md`.
+- **Tests run**: `npm run build`, `npm run typecheck`, static Quick Look preview từ
+  `.next/server/app/index.html` vì phiên này không mở được `localhost`.
+- **Commit message**: `fix(mealfit): recenter home hero proteins`
+- **Notes/Risks**: Preview tĩnh đã xác nhận cá hồi không còn bị cắt đáy; browser plugin `iab` và
+  local listen đều không khả dụng trong phiên này nên chưa verify được bản chạy HTTP thật.
+
+## 2026-06-17 — chỉnh homepage full-bleed, headline 2 dòng và fit trọn viewport
+
+- **Prompt summary**: Home page phải hiển thị full trang, không nằm trong một ô/khung; headline dòng
+  1 là "Ăn chuẩn - Tập chất", dòng 2 là "Cùng MealFit"; mở `/` phải thấy trọn hero không cần scroll,
+  cá hồi không bị tụt xuống dưới.
+- **Scope**: MealFit public homepage hero layout refinement.
+- **Main files changed**: `components/home/PublicHomePage.tsx`,
+  `components/home/HomeHeroScene.tsx`, `docs/commit_prompt_map.md`.
+- **Tests run**: `npm run typecheck`, `npm run build`. Browser plugin không khả dụng trong phiên này;
+  `localhost:3000` bị process `node` giữ port nhưng không phản hồi HTTP nên chưa chụp lại được visual.
+- **Commit message**: `fix(mealfit): make home hero full-bleed and fit viewport`
+- **Notes/Risks**: `main` hiện khóa `h-dvh` + `overflow-hidden`; content vẫn nằm trong max-width để
+  giống mockup nhưng không còn border/radius/shadow dạng card.
+
+## 2026-06-17 — chuyển landing cũ sang /about-us và redesign hero homepage theo mockup
+
+- **Prompt summary**: Đưa trang home hiện tại sang `/about-us`, refactor và redesign lại `/` theo
+  mockup `home-page.png` / `home-page-design.png`, dùng source tham khảo trong
+  `docs/new-frontend-design`.
+- **Scope**: MealFit public marketing routes + hero visual system + route/docs update.
+- **Main files changed**: `app/page.tsx`, `app/about-us/page.tsx`,
+  `components/home/{PublicHomePage,HomeHeroScene,LegacyLandingPage,KitchenVideo}.tsx`,
+  `app/globals.css`, `public/home/*`, `docs/{mealfit_plan,mealfit_prompt,commit_prompt_map}.md`.
+- **Tests run**: `npm run typecheck`, `npm run build`.
+- **Commit message**: `feat(mealfit): redesign hero home and move legacy landing to about-us`
+- **Notes/Risks**: Homepage mới ưu tiên hero theo mockup; menu/video/FAQ chi tiết vẫn nằm ở
+  `/about-us` để tránh làm loãng first impression của `/`.
+
+## 2026-06-17 — khóa hero homepage vào 1 viewport và làm sạch asset protein 3D
+
+- **Prompt summary**: Home page phải nhìn trọn trong 1 màn hình không cần scroll; 3 miếng thịt phải
+  giống mockup hơn, không có viền/nền giả. User đã thay asset mới trong `public/home`.
+- **Scope**: MealFit homepage layout compression + hero scene refinement + asset cleanup/cache bust.
+- **Main files changed**: `components/home/{PublicHomePage,HomeHeroScene}.tsx`,
+  `app/globals.css`, `public/home/{chicken,beef,salmon}.png`, `docs/commit_prompt_map.md`.
+- **Tests run**: `npm run build`, `npm run typecheck`, local headless Chrome screenshot at `1440x900`.
+- **Commit message**: `fix(mealfit): fit hero home within viewport and clean protein assets`
+- **Notes/Risks**: 3 PNG đã được floodfill loại checkerboard baked background và home dùng
+  `unoptimized` + query suffix để tránh cache ảnh cũ của Next/Image trong lúc phát triển.
+
 ## 2026-06-16 — tích hợp video giới thiệu quy trình chế biến tại trang chủ
 
 - **Prompt summary**: Setup video `public/video.mp4` lên trang chủ `/` stream tự nhiên, auto play khi scroll tới, không viền, thiết kế giao diện chiếu video thẩm mỹ, chuyên nghiệp, sinh động, tự nhiên, thu hút khách hàng, hạn chế text.
